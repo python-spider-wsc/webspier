@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+
+include webspider/requirements.txt
+include webspider/VERSION
+
+
+recursive-include webspider/templates *
+
+
+global-exclude __pycache__ *.py[cod]

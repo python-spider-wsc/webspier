@@ -1,0 +1,30 @@
+# -*- coding: utf-8 -*-
+"""
+Created  : {DATE}
+---------
+@summary :
+---------
+@author  : {USER}
+"""
+
+from webspider.spider.baseSpider import BaseSpider
+from webspider.core.request import Request
+
+def start_requests():
+    """初始化任务"""
+    yield Request(url="https://www.baidu.com")
+
+class ${object_name}(BaseSpider):
+    name="${spider_name}"
+
+    def parse(self, request, response):
+        """网页解析"""
+        pass
+    
+    def before_request(self, request):
+        """请求之前的hook函数"""
+        request.random_user_agent=True
+
+
+if __name__ == "__main__":
+    ${object_name}(start_requests).run()
