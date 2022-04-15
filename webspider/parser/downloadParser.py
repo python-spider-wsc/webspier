@@ -7,14 +7,15 @@
 @Desc    :   url解析器
 '''
 
-import time
+
 from webspider.db.mongoDB import ResponseRecordMongo
 import webspider.config.settings as setting
-import traceback
 from webspider.db.items import Items
 from webspider.parser import baseParser
-import traceback
 from webspider.core.request import Request
+from webspider.utils.log import log
+import traceback
+import time
 
 class DownloadParser(baseParser.BaseParser):
     """
@@ -40,9 +41,10 @@ class DownloadParser(baseParser.BaseParser):
         try:
             self.before_request(request)
             response = request.get_response()
-        except:
-            trace = traceback.format_exc()
-            self.retry_request(request, None, trace)
+        except Exception as e:
+            log.error("request error:")
+            log.exception(e)
+            self.retry_request(request, None, traceback.format_exc())
             return
         if not self.verify_reponse(request, response): # 验证结果失败
             self.retry_request(request, response)
@@ -61,18 +63,22 @@ class DownloadParser(baseParser.BaseParser):
                     self.queue.add(item)
                 elif isinstance(item, Items):
                     self.item_queue.add(item)
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            log.error("parse error:")
+            log.exception(e)
 
     def save_response_into_mongo(self, request, response, col="spider", trace=""):
         """保存请求结果到mongo"""
         if self.response_mongo is None:
             self.response_mongo = ResponseRecordMongo(col=col)
-        self.response_mongo.save_response(response, request, trace)
+        res = self.response_mongo.save_response(response, request, trace)
+        if col=="error":
+            log.error("response save into mongo : %s", res.inserted_id)
 
     def verify_reponse(self, request, response):
         """验证请求结果是否正确"""
         if response.status_code != 200:
+            log.error("request error: status code is %s", response.status_code)
             return False
         if getattr(request, "check_reponse", None):
             return request.check_reponse(response)
@@ -85,6 +91,7 @@ class DownloadParser(baseParser.BaseParser):
         if request.retry_times<setting.RETRY_TIMES: # 小于重试次数
             self.queue.add(request)
         self.queue.error_nums += 1
+        log.error("request error: retry time %s", request.retry_times)
         if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
             self.save_response_into_mongo(request, reponse, col="error", trace=trace) # 错误结果报错
 

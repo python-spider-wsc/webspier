@@ -25,5 +25,7 @@ class ResponseRecordMongo():
             data["traceback"] = trace
     
         mycol = self.mydb[self.col]
-        mycol.insert_one(data)
+        res = mycol.insert_one(data)
+        return res
+
 

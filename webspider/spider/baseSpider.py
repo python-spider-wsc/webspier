@@ -10,6 +10,7 @@ import time
 from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.db.memoryDB import MemoryDB
+from webspider.utils.log import log
 
 
 class BaseSpider():
@@ -75,6 +76,10 @@ class BaseSpider():
     def all_thread_is_done(self):
         for _ in range(3): # 多检测几次，防止误杀
             if not (self.response_queue.empty() and self.database_queue.empty()):
+                return False
+            # 计算失败和成功的比值，当失败率达到50%，强制停止
+            if self.response_queue.error_nums>self.response_queue.success_nums and self.response_queue.nums>100:
+                log.error("失败次数多于成功次数，已停止爬虫")
                 return False
             time.sleep(1)
         return True

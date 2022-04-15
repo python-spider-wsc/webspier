@@ -3,6 +3,7 @@ from requests.adapters import HTTPAdapter
 import webspider.config.settings as setting
 from webspider.core import user_agent
 from webspider.core.response import MyResponse
+from webspider.utils.log import log
 
 class Request():
     user_agent_pool = user_agent

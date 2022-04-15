@@ -9,6 +9,7 @@ Created  : {DATE}
 
 from webspider.spider.baseSpider import BaseSpider
 from webspider.core.request import Request
+from webspider.utils.log import log
 
 def start_requests():
     """初始化任务"""
@@ -27,4 +28,5 @@ class ${object_name}(BaseSpider):
 
 
 if __name__ == "__main__":
+    # log.set_log_config(name="${spider_name}.log") # 日志的存储位置
     ${object_name}(start_requests).run()

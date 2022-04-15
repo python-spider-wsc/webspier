@@ -8,6 +8,7 @@ __all__ = [
     "core",
     "db",
     "config"
+    "utils"
 ]
 
 # from feapder.core.spiders import Spider, BatchSpider, AirSpider

@@ -13,10 +13,6 @@ import datetime
 from webspider.config import settings
 
 
-def get_current_date(date_format="%Y-%m-%d %H:%M:%S"):
-    return datetime.datetime.now().strftime(date_format)
-
-
 class Record():
     """爬虫或者任务的记录"""
     def __init__(self):
@@ -30,6 +26,7 @@ class Record():
         self.record[category].update(res)
         self.save_record()
         
+        
     def check(self):
         """剔除已经不存在的爬虫或者任务"""
         result = {}
@@ -40,11 +37,11 @@ class Record():
                 if os.path.exists(self.record[key][name]):
                     result[key][name] = self.record[key][name]
                 else:
+                    print("delete {}: {}".format(key, name))
                     save_flag = True
         if save_flag:
             self.record = result
             self.save_record()
-
     
     def save_record(self):
         with open(os.path.join(self.template_path, "record.json"), "w", encoding="utf-8") as f:
@@ -99,7 +96,7 @@ class Create(Record):
         
     def deal_file_info(self, file):
         user = getattr(settings, "USER", getpass.getuser())
-        file = file.replace("{DATE}", get_current_date())
+        file = file.replace("{DATE}", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         file = file.replace("{USER}", user)
         return file
 
@@ -109,6 +106,7 @@ class Create(Record):
             template = f.read()
         result = self.create(args, template)
         self.add_record(result, "spider")
+        print("创建爬虫成功")
 
 
 class Running(Record):
@@ -125,6 +123,7 @@ class Running(Record):
             if not path:
                 path = os.path.join(args.path, args.name+".py")
             if not path: #没找到路径
+                print("未找到爬虫文件: {}, 请输入路径参数".format(args.name))
                 return -1
             os.system('python '+path)
             if name not in self.record["spider"]:

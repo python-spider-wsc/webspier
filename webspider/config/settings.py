@@ -6,6 +6,15 @@ RETRY_TIMES = 2 # 失败重试次数
 SAVE_ERROR_RESPONSE = True
 # -----------------------------
 
+# -----------日志模块的配置---------------
+LOG_LEVEL= "DEBUG"
+LOG_MAX_BYTES = 10 * 1024 * 1024
+LOG_BACKUP_COUNT = 5
+LOG_ENCODING = "utf8"
+LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [<pid: %(process)s>] [<tid: %(thread)d>] -- %(filename)s[line:%(lineno)d] %(message)s"
+PRINT_EXCEPTION_DETAILS = True
+# ---------------------------------------
+
 ############# 导入用户自定义的setting #############
 try:
     from settings import *
