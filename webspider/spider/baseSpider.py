@@ -9,16 +9,12 @@
 import time
 from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
-from webspider.db.memoryDB import MemoryDB
 from webspider.utils.log import log
 
 
 class BaseSpider():
 
     def __init__(self, distribute_tasks, thread_nums=1, **kwargs):
-        self.name = kwargs.get("name")
-        self.response_queue = MemoryDB() # 待解析队列
-        self.database_queue = MemoryDB() # 待存储队列
         self.thread_nums = thread_nums
         self.start_request = distribute_tasks
 

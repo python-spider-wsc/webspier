@@ -8,13 +8,13 @@
 '''
 
 import queue
+from webspider.db.baseMQ import BaseMQ
 
-class MemoryDB:
+class MemoryDB(BaseMQ):
     def __init__(self):
+        super(MemoryDB, self).__init__()
         self.queue = queue.Queue()
-        self.nums = 0
-        self.success_nums = 0
-        self.error_nums = 0
+        
 
     def add(self, item):
         self.nums += 1

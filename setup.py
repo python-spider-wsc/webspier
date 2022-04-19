@@ -23,12 +23,11 @@ packages = setuptools.find_packages()
 requires = [
     "better-exceptions>=0.2.2",
     "DBUtils>=2.0",
-    "parsel>=1.5.2",
     "PyMySQL>=0.9.3",
     "redis>=2.10.6,<4.0.0",
     "requests>=2.22.0",
     "pymongo>=3.10.1",
-    "urllib3>=1.25.8"
+    "urllib3>=1.22",
 ]
 
 

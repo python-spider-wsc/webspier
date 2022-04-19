@@ -1,4 +1,3 @@
-from pip import main
 from lxml import etree
 from requests.models import Response
 import re

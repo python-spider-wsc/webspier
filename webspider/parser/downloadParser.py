@@ -49,11 +49,9 @@ class DownloadParser(baseParser.BaseParser):
         if not self.verify_reponse(request, response): # 验证结果失败
             self.retry_request(request, response)
             return
-        self.queue.success_nums += 1
         if request.save_response:
             self.save_response_into_mongo(request, response)
-        # 直接使用回调函数处理
-        # 若是没有指定函数，直接使用spider.parse解析
+        # 直接使用回调函数处理，若是没有指定函数，直接使用spider.parse解析
         try:
             callback = request.callback if getattr(request, "callback", None) else "parse"
             callback = getattr(self.spider, callback)
@@ -63,7 +61,10 @@ class DownloadParser(baseParser.BaseParser):
                     self.queue.add(item)
                 elif isinstance(item, Items):
                     self.item_queue.add(item)
+            self.queue.success_nums += 1
         except Exception as e:
+            self.queue.error_nums += 1 # 回调解析失败，保存结果，不再重试
+            self.save_response_into_mongo(request, response, col="error", trace=traceback.format_exc())
             log.error("parse error:")
             log.exception(e)
 
@@ -85,7 +86,7 @@ class DownloadParser(baseParser.BaseParser):
         else: # 假如没有指定check_reponse， 直接使用spider默认的check_reponse
             return self.spider.check_reponse(response)
 
-    def retry_request(self, request, reponse, trace=""):
+    def retry_request(self, request, response, trace=""):
         """重新请求"""
         request.retry_times += 1
         if request.retry_times<setting.RETRY_TIMES: # 小于重试次数
@@ -93,7 +94,7 @@ class DownloadParser(baseParser.BaseParser):
         self.queue.error_nums += 1
         log.error("request error: retry time %s", request.retry_times)
         if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
-            self.save_response_into_mongo(request, reponse, col="error", trace=trace) # 错误结果报错
+            self.save_response_into_mongo(request, response, col="error", trace=trace) # 错误结果报错
 
     def before_request(self, request):
         """请求之前的hook函数"""
