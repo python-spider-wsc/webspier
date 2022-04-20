@@ -11,22 +11,23 @@ from webspider.commands.create_or_run import Create, Running
 
 def execute():
     parser = argparse.ArgumentParser(description='webspider command:')
-    parser.add_argument('params1', type=str, help='命令行必填参数', choices=["create", "run"])
-    parser.add_argument('target', type=str, help='命令行必填参数', choices=["spider", "task"])
-    parser.add_argument('--path', default=".", help='爬虫或者任务的路径')
-    parser.add_argument('--name', required=True, help='爬虫或者任务的名字')
+    parser.add_argument('action', type=str, help='命令行必填参数',nargs='?', default=None, choices=["create", "run"])
+    parser.add_argument('--path', default=".", help='爬虫的路径')
+    parser.add_argument('-n', '--name', help='爬虫的名字')
+    parser.add_argument('-c', '--check', nargs='?', const=True, help='剔除无效爬虫')
+    parser.add_argument('-e', '--export', nargs='?', const=True, help='导出爬虫列表文件')
     args = parser.parse_args()
-
-    if args.params1 == "create":
-        if args.target == "spider":
-            Create().create_spider(args)   
-        else:
-            print("创建任务：", args.name)
-    else:
-        if args.target == "spider":
+    if args.action:
+        if not args.name:
+            parser.error("缺少爬虫名字")
+        if args.action == "create":
+            Create().create_spider(args) 
+        elif args.action == "run":
             Running().run(args)
-        else:
-            print("运行任务：", args.name)
+    elif args.check:
+        Create().check() 
+    elif args.export:
+        Create().export_record()
 
 
 

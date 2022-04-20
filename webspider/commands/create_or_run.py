@@ -20,10 +20,10 @@ class Record():
         with open(os.path.join(self.template_path, "record.json"), "r", encoding="utf-8") as f:
             self.record = json.load(f)
 
-    def add_record(self, res, category):
+    def add_record(self, res):
         if not res:
             return
-        self.record[category].update(res)
+        self.record.update(res)
         self.save_record()
         
         
@@ -31,14 +31,12 @@ class Record():
         """剔除已经不存在的爬虫或者任务"""
         result = {}
         save_flag = False
-        for key in self.record:
-            result[key] = {}
-            for name in self.record[key]:
-                if os.path.exists(self.record[key][name]):
-                    result[key][name] = self.record[key][name]
-                else:
-                    print("delete {}: {}".format(key, name))
-                    save_flag = True
+        for name in self.record:
+            if os.path.exists(self.record[name]):
+                result[name] = self.record[name]
+            else:
+                print("delete {}".format(name))
+                save_flag = True
         if save_flag:
             self.record = result
             self.save_record()
@@ -46,7 +44,11 @@ class Record():
     def save_record(self):
         with open(os.path.join(self.template_path, "record.json"), "w", encoding="utf-8") as f:
             json.dump(self.record, f)
-        
+    
+    def export_record(self):
+        print(self.record)
+        with open("./webspider/templates/record.json", "w", encoding="utf-8") as f:
+            json.dump(self.record, f)
     
 
 
@@ -70,9 +72,7 @@ class Create(Record):
             flag = input("该文件已经存在,是否覆盖,y/n: ")
             if flag.lower() != "y":
                 return
-            result =None
-        else:
-            result = {name:path}
+        result = {name:path}
         template = template.replace("${object_name}", name).replace("${spider_name}", args.name.lower())
         with open(path, 'w', encoding="utf-8") as f:
             f.write(template)
@@ -105,7 +105,7 @@ class Create(Record):
         with open(template_path, 'r', encoding="utf-8") as f:
             template = f.read()
         result = self.create(args, template)
-        self.add_record(result, "spider")
+        self.add_record(result)
         print("创建爬虫成功")
 
 
@@ -118,15 +118,14 @@ class Running(Record):
     
     def run(self, args):
         name = args.name[0].upper()+args.name[1:]
-        if args.target == "spider":
-            path = self.record["spider"].get(name) # 查看是否记录了运行文件
-            if not path:
-                path = os.path.join(args.path, args.name+".py")
-            if not path: #没找到路径
-                print("未找到爬虫文件: {}, 请输入路径参数".format(args.name))
-                return -1
-            os.system('python '+path)
-            if name not in self.record["spider"]:
-                self.record["spider"][name] = os.path.abspath(path)
-                self.save_record()
+        path = self.record.get(name) # 查看是否记录了运行文件
+        if not path:
+            path = os.path.join(args.path, args.name+".py")
+        if not path: #没找到路径
+            print("未找到爬虫文件: {}, 请输入路径参数".format(args.name))
+            return -1
+        os.system('python '+path)
+        if name not in self.record:
+            self.record[name] = os.path.abspath(path)
+            self.save_record()
 
