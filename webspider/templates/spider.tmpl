@@ -32,6 +32,10 @@ class ${object_name}(BaseSpider):
         """请求之前的hook函数"""
         request.random_user_agent=True
 
+    def check_reponse(self, response):
+        """检测请求的结果是否符合预期"""
+        return True
+
 
 if __name__ == "__main__":
     # log.set_log_config(name="${spider_name}.log") # 日志的存储位置

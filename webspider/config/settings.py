@@ -13,6 +13,7 @@ LOG_BACKUP_COUNT = 5
 LOG_ENCODING = "utf8"
 LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [<pid: %(process)s>] [<tid: %(thread)d>] -- %(filename)s[line:%(lineno)d] %(message)s"
 PRINT_EXCEPTION_DETAILS = True
+LOG_PATH = "logs"
 ##############################################
 
 ###############数据库相关配置###################

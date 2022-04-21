@@ -1,11 +1,12 @@
 
 from webspider.db.baseMysql import MySQLWrapper
+from webspider.config import settings
 
 class BaseModel():
     """docstring for baseModel"""
-    mysql = MySQLWrapper()
 
-    def __init__(self, table, unique_key):
+    def __init__(self, table, unique_key, database="default"):
+        self.mysql = MySQLWrapper(settings.DATABASES[database])
         self.TABLENAME = table
         self.FIELD, self.DEFAULT = self.init_model(table)
         self.UNIQUE_KEY = unique_key
@@ -16,16 +17,21 @@ class BaseModel():
     def insert(self, columns=None):
         result = self.get_field(columns)
         sql = self.make_insert_sql(result)
-        self.__class__.mysql.execute(sql, self.get_value(result), category="list")
+        self.mysql.execute(sql, self.get_value(result), category="list")
 
-    def find(self, where=None, columns=None):
+    def find(self, where=None, columns=["id"]):
+        if where is None:
+            where = self.UNIQUE_KEY
         sql = self.make_select_sql(where, columns)
-        return self.__class__.mysql.fetchOne(sql, *self.get_value(where))
+        return self.mysql.fetchOne(sql, *self.get_value(where))
+
+    def find_many(self, sql, *args):
+        return self.mysql.fetchAll(sql, *args)
 
     def update(self, where, columns=None):
         result = self.get_field(columns)
         sql = self.make_update_sql(result, where)
-        return self.__class__.mysql.execute(sql, self.get_value(result), category="list")
+        return self.mysql.execute(sql, self.get_value(result), category="list")
 
     def save(self):
         result = self.find(where=self.UNIQUE_KEY, columns=["id"])
@@ -40,6 +46,8 @@ class BaseModel():
         return result
 
     def get_value(self, data):
+        if not data:
+            return []
         result = [self.__dict__.get(column, self.DEFAULT[self.FIELD.index(column)])for column in data]
         return result
 
@@ -65,25 +73,19 @@ class BaseModel():
         sql = "UPDATE `{table}` SET {field} WHERE {where}".format(table=self.TABLENAME,field=field, where=where)
         return sql
 
-    @classmethod
-    def init_model(cls, table):
+    def init_model(self, table):
         select_sql = "show columns from {}".format(table)
-        result = cls.mysql.fetchAll(select_sql)
+        result = self.mysql.fetchAll(select_sql)
         field = tuple((item["Field"] for item in result))
         default = tuple((item["Default"] for item in result))
         return field, default
 
     def clear(self):
-        tmp = [key for key in self.__dict__ if key not in ("TABLENAME", "FIELD", "DEFAULT", "UNIQUE_KEY")]
+        tmp = [key for key in self.__dict__ if key not in ("TABLENAME", "FIELD", "DEFAULT", "UNIQUE_KEY", "mysql")]
         for key in tmp:
             del self.__dict__[key]
 
     def __str__(self):
-        return str({key:self.__dict__[key] for key in self.__dict__ if key not in ("TABLENAME", "FIELD", "DEFAULT", "UNIQUE_KEY")})
+        return str({key:self.__dict__[key] for key in self.__dict__ if key not in ("TABLENAME", "FIELD", "DEFAULT", "UNIQUE_KEY", "mysql")})
 
 
-if __name__ == '__main__':
-    bm = BaseModel("zkt_task")
-    bm.sid=1
-    bm.status = 2
-    bm.insert(columns=['sid', 'service', 'pid', 'status'])

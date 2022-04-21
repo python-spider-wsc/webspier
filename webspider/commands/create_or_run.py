@@ -5,12 +5,12 @@
 @Version :   1.0
 @Contact :   wsc352@126.com
 '''
-
 import json
 import os
 import getpass
 import datetime
 from webspider.config import settings
+from webspider.db.tableModel import BaseModel
 
 
 class Record():
@@ -19,6 +19,13 @@ class Record():
         self.template_path = os.path.abspath(os.path.join(__file__, "../../templates"))
         with open(os.path.join(self.template_path, "record.json"), "r", encoding="utf-8") as f:
             self.record = json.load(f)
+        self.__table_spider = None
+
+    @property
+    def table_spider(self):
+        if self.__table_spider is None:
+            self.__table_spider = BaseModel(settings.SPIDER_TABEL, ["name"])
+        return self.__table_spider
 
     def add_record(self, res):
         if not res:
@@ -45,11 +52,35 @@ class Record():
         with open(os.path.join(self.template_path, "record.json"), "w", encoding="utf-8") as f:
             json.dump(self.record, f)
     
-    def export_record(self):
-        print(self.record)
-        with open("./webspider/templates/record.json", "w", encoding="utf-8") as f:
-            json.dump(self.record, f)
-    
+    def export_record(self, args):
+        self.check()
+        if args.save_mysql:
+            if args.name:
+                if not self.record.get(args.name):
+                    print("不存在该爬虫记录")
+                self.save_record_into_mysql(name, self.record[args.name])  
+            else:
+                for name in self.record:
+                    self.save_record_into_mysql(name, self.record[name])    
+            print("爬虫记录已保存到mysql")
+        else:
+            if not os.path.exists("./webspider/templates"):
+                print("无法在该目录下备份记录文件")
+                return
+            with open("./webspider/templates/record.json", "w", encoding="utf-8") as f:
+                json.dump(self.record, f)
+            print("爬虫记录备份成功")
+
+    def save_record_into_mysql(self, name, path):
+        if not settings.DATABASES: # 没有配置mysql信息
+            raise Exception("没有配置mysql信息")
+        if self.table_spider is None:
+            self.table_spider = BaseModel(settings.SPIDER_TABEL, ["name"])
+        self.table_spider.name = name
+        self.table_spider.path = path
+        self.table_spider.log = os.path.join(settings.LOG_PATH, name+'.log')
+        self.table_spider.save()
+        self.table_spider.clear()
 
 
 class Create(Record):
@@ -67,13 +98,15 @@ class Create(Record):
             filename = args.name+suffix
             path = os.path.join(args.path, filename)
         # 判断文件是否存在
+        if args.save_mysql:
+            self.save_record_into_mysql(args.name, path)
         name = args.name[0].upper()+args.name[1:]
         if os.path.exists(path):
             flag = input("该文件已经存在,是否覆盖,y/n: ")
             if flag.lower() != "y":
                 return
-        result = {name:path}
-        template = template.replace("${object_name}", name).replace("${spider_name}", args.name.lower())
+        result = {args.name:path}
+        template = template.replace("${object_name}", name).replace("${spider_name}", args.name)
         with open(path, 'w', encoding="utf-8") as f:
             f.write(template)
         self.create_setting_file(path)
@@ -115,17 +148,23 @@ class Running(Record):
     def __init__(self):
         super(Running, self).__init__()
 
-    
     def run(self, args):
-        name = args.name[0].upper()+args.name[1:]
-        path = self.record.get(name) # 查看是否记录了运行文件
-        if not path:
-            path = os.path.join(args.path, args.name+".py")
-        if not path: #没找到路径
-            print("未找到爬虫文件: {}, 请输入路径参数".format(args.name))
-            return -1
-        os.system('python '+path)
-        if name not in self.record:
-            self.record[name] = os.path.abspath(path)
+        if args.save_mysql:
+            self.table_spider.name = args.name
+            res = self.table_spider.find(columns=("id", "path"))
+            if not res:
+                raise Exception("MYSQL中不存在该爬虫")
+            spider_id = res["id"]
+            path = res["path"]
+            os.system('python '+path+" --id "+str(spider_id))
+        else:
+            path = self.record.get(args.name) # 查看是否记录了运行文件
+            if not path:
+                path = os.path.join(args.path, args.name+".py")
+            if not os.path.exists(path): #没找到路径
+                raise Exception("未找到爬虫文件: {}, 请输入路径参数 --path".format(args.name))
+            os.system('python '+path)
+        if args.name not in self.record:
+            self.record[args.name] = os.path.abspath(path)
             self.save_record()
 

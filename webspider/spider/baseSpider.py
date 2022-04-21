@@ -80,3 +80,11 @@ class BaseSpider():
             time.sleep(1)
         return True
 
+    def record_before(self):
+        """任务保存到mysql之前的初始化工作"""
+        pass
+
+    def record_after(self):
+        """任务保存到mysql"""
+        pass
+

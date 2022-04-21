@@ -26,7 +26,7 @@ def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_coun
         logger = logging.getLogger(name[:-4])
         log_level = log_level or settings.LOG_LEVEL
         logger.setLevel(log_level)
-        if path and not os.path.exists(os.path.join(path, name)):
+        if path and not os.path.exists(path):
             os.makedirs(path)
         handler = ConcurrentRotatingFileHandler if is_mp else RotatingFileHandler
         handler = handler(

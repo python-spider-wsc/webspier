@@ -16,6 +16,7 @@ def execute():
     parser.add_argument('-n', '--name', help='爬虫的名字')
     parser.add_argument('-c', '--check', nargs='?', const=True, help='剔除无效爬虫')
     parser.add_argument('-e', '--export', nargs='?', const=True, help='导出爬虫列表文件')
+    parser.add_argument('--save_mysql', nargs='?', const=True, help='将爬虫记录保存到mysql')
     args = parser.parse_args()
     if args.action:
         if not args.name:
@@ -27,7 +28,7 @@ def execute():
     elif args.check:
         Create().check() 
     elif args.export:
-        Create().export_record()
+        Create().export_record(args)
 
 
 
