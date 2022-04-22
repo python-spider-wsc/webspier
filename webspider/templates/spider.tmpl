@@ -10,6 +10,7 @@ Created  : {DATE}
 from webspider.spider.baseSpider import BaseSpider
 from webspider.core.request import Request
 from webspider.utils.log import log
+from webspider.utils.tools import SpiderRecordManager
 from webspider.db.memoryDB import MemoryDB  # 使用内置的queue作为队列
 
 def start_requests():
@@ -19,10 +20,11 @@ def start_requests():
 class ${object_name}(BaseSpider):
     name="${spider_name}"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, spider_id=None, **kwargs):
         super(${object_name}, self).__init__(*args, **kwargs)
         self.response_queue = MemoryDB() # 待解析队列
         self.database_queue = MemoryDB() # 待存储队列
+        self.spider_id = spider_id
 
     def parse(self, request, response):
         """网页解析"""
@@ -39,4 +41,5 @@ class ${object_name}(BaseSpider):
 
 if __name__ == "__main__":
     # log.set_log_config(name="${spider_name}.log") # 日志的存储位置
-    ${object_name}(start_requests).run()
+    with SpiderRecordManager(${object_name}.name) as spider:
+        ${object_name}(start_requests, spider_id=spider).run()

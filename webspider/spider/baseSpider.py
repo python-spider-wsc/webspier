@@ -10,13 +10,16 @@ import time
 from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.utils.log import log
-
+import datetime
+from webspider.db.tableModel import BaseModel
+from webspider.config import settings
 
 class BaseSpider():
 
     def __init__(self, distribute_tasks, thread_nums=1, **kwargs):
         self.thread_nums = thread_nums
         self.start_request = distribute_tasks
+        self.task_mysql =None
 
     def call_end(self):
         """
@@ -48,6 +51,7 @@ class BaseSpider():
         return True
 
     def run(self):
+        self.record_before()
         for request in self.start_request(): # 初始请求
             self.response_queue.add(request)
         self.call_start()
@@ -68,6 +72,7 @@ class BaseSpider():
             thread.stop()
             thread.join()
         self.call_end()
+        self.record_after()
 
     def all_thread_is_done(self):
         for _ in range(3): # 多检测几次，防止误杀
@@ -82,9 +87,15 @@ class BaseSpider():
 
     def record_before(self):
         """任务保存到mysql之前的初始化工作"""
-        pass
+        if not self.spider_id:
+            return
+        self.start_time = datetime.datetime.now()
+        if self.task_mysql is None:
+            self.task_mysql = BaseModel(settings.task_TABEL, ["id"])
+        self.__class__.name
 
     def record_after(self):
         """任务保存到mysql"""
-        pass
+        if not self.spider_id:
+            return
 

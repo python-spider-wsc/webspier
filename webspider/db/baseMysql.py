@@ -6,9 +6,6 @@ from pymysql.err import ProgrammingError
 # from DBUtils.PooledDB import PooledDB
 from dbutils.pooled_db import PooledDB, InvalidConnection
 import os
-import sys
-if os.environ.get('ENV_CONFIG') not in sys.path:
-    sys.path.insert(3, os.environ.get('ENV_CONFIG'))
 from Config import MYSQL
 # from common.utils import auto_retry
 

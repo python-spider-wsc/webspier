@@ -13,7 +13,6 @@ from webspider.config import settings
 from better_exceptions import format_exception
 import os, sys
 
-
 def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_count=None, encoding=None, is_mp=False):
     if name: # 如果有名字，表示存储到日志文件中
         path = path or settings.LOG_PATH
@@ -22,7 +21,7 @@ def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_coun
         encoding = encoding or settings.LOG_ENCODING
         formatter = logging.Formatter(settings.LOG_FORMAT)
         if settings.PRINT_EXCEPTION_DETAILS:
-            formatter.formatException = lambda exc_info: format_exception(*exc_info)
+            formatter.formatException = lambda exc_info: "".join(format_exception(*exc_info))
         logger = logging.getLogger(name[:-4])
         log_level = log_level or settings.LOG_LEVEL
         logger.setLevel(log_level)
@@ -42,7 +41,7 @@ def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_coun
         logger.setLevel(logging.DEBUG)
         stream_handler = logging.StreamHandler()
         stream_handler.stream = sys.stdout
-        formatter = logging.Formatter("[%(asctime)s] %(filename)s[line:%(lineno)d] --  %(message)s")
+        formatter = logging.Formatter("%(filename)s[line:%(lineno)d] --  %(message)s")
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
