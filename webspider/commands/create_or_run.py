@@ -10,7 +10,7 @@ import os
 import getpass
 import datetime
 from webspider.config import settings
-from webspider.db.tableModel import BaseModel
+from webspider.db.mysqlDB import BaseModel
 
 
 class Record():
@@ -74,13 +74,7 @@ class Record():
     def save_record_into_mysql(self, name, path):
         if not settings.DATABASES: # 没有配置mysql信息
             raise Exception("没有配置mysql信息")
-        if self.table_spider is None:
-            self.table_spider = BaseModel(settings.SPIDER_TABEL, ["name"])
-        self.table_spider.name = name
-        self.table_spider.path = path
-        self.table_spider.log = os.path.join(settings.LOG_PATH, name+'.log')
-        self.table_spider.save()
-        self.table_spider.clear()
+        self.table_spider.save(name=name, path=path, log=os.path.join(settings.LOG_PATH, name+'.log'))
 
 
 class Create(Record):
@@ -150,8 +144,7 @@ class Running(Record):
 
     def run(self, args):
         if args.save_mysql:
-            self.table_spider.name = args.name
-            res = self.table_spider.find(columns=("id", "path"))
+            res = self.table_spider.find({"name":args.name}, columns=("id", "path"))
             if not res:
                 raise Exception("MYSQL中不存在该爬虫")
             spider_id = res["id"]

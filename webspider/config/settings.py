@@ -23,12 +23,6 @@ REDIS_PORT = 6379
 REDIS_PWD = None
 REDIS_DB = 0
 REDIS_TYPE = "queue"
-# -------------------mysql----------------------
-MYSQL_HOST = None
-MYSQL_PORT = 3306
-MYSQL_USER = "root"
-MYSQL_PWD = None
-MYSQL_DB = 0
 ##############################################
 
 ############# 导入用户自定义的setting #############

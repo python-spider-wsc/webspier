@@ -11,7 +11,7 @@ from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.utils.log import log
 import datetime
-from webspider.db.tableModel import BaseModel
+from webspider.db.mysqlDB import BaseModel
 from webspider.config import settings
 
 class BaseSpider():

@@ -5,17 +5,22 @@
 @Version :   1.0
 @Contact :   wsc352@126.com
 '''
+from webspider.db.mysqlDB import BaseModel
 
-from webspider.db.tableModel import BaseModel
-
-class Items(BaseModel):
+class Items():
 
     def __init__(self, table="", unique_key=[]):
-        self.__table = table
-        self.__unique_key = unique_key
+        self.__model = BaseModel(table, unique_key)
 
     def save(self):
         if self.__table:
-            super(Items, self).save()
+            self.__model.save(**self.to_dict())
         else:
             print(self.__dict__)
+
+    def to_dict(self):
+        result = {}
+        for key in self.__model.FIELD:
+            if key in self.__dict__:
+                result[key] = self.__dict__[key]
+        return result
