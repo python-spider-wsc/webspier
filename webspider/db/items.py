@@ -24,3 +24,6 @@ class Items():
             if key in self.__dict__:
                 result[key] = self.__dict__[key]
         return result
+
+    def __str__(self):
+        return str(self.to_dict())

@@ -11,15 +11,27 @@ from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.utils.log import log
 import datetime
-from webspider.db.mysqlDB import BaseModel
+from webspider.db.items import Items
 from webspider.config import settings
+from webspider.utils import tools
+import uuid
+
+def parse_cmdline_args():
+    """解析命令行参数"""
+    import argparse
+    argparser = argparse.ArgumentParser(description="spider record manager")
+    argparser.add_argument("--id", type=int, help="spider id")
+    args = argparser.parse_args()
+    return args.id
 
 class BaseSpider():
-
+    """爬虫的接口类"""
     def __init__(self, distribute_tasks, thread_nums=1, **kwargs):
         self.thread_nums = thread_nums
         self.start_request = distribute_tasks
         self.task_mysql =None
+        self.spider_id = parse_cmdline_args()
+        self.task_id = uuid.uuid4()
 
     def call_end(self):
         """
@@ -87,15 +99,23 @@ class BaseSpider():
 
     def record_before(self):
         """任务保存到mysql之前的初始化工作"""
+        log.info("spider < %s > start running", self.name)
+        self.start_time = datetime.datetime.now()
         if not self.spider_id:
             return
-        self.start_time = datetime.datetime.now()
         if self.task_mysql is None:
-            self.task_mysql = BaseModel(settings.task_TABEL, ["id"])
-        self.__class__.name
+            self.task_mysql = Items(settings.task_TABEL, unique_key=["task_code"])
+        ip = tools.get_service_ip()
+
+        self.task_mysql.save(task_code=self.task_id, spider_id=self.spider_id, )
 
     def record_after(self):
         """任务保存到mysql"""
+        s = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
+        log.info("spider < %s > spent time: %s s", self.name, s)
         if not self.spider_id:
-            return
+            return   
 
+    @property
+    def name(self):
+        return self.__class__.name
