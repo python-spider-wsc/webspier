@@ -50,13 +50,16 @@ def formatSecond(second):
     s += "{}分钟".format(minute) if minute else ""
     if not s or second:
         s += "{}秒".format(second)
-    print (s)
+    return s
 
 def get_service_ip():
     import socket
     ##1.获取主机名
     hostname = socket.gethostname()
     ip=socket.gethostbyname(hostname)
-    print(ip)
     res = re.findall(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", ip)
     return res[0] if res else ip
+
+def get_process_id():
+    """获取正在运行的进程ID"""
+    return os.getpid()

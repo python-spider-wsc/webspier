@@ -19,11 +19,10 @@ def start_requests():
 class ${object_name}(BaseSpider):
     name="${spider_name}"
 
-    def __init__(self, *args, spider_id=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(${object_name}, self).__init__(*args, **kwargs)
         self.response_queue = MemoryDB() # 待解析队列
         self.database_queue = MemoryDB() # 待存储队列
-        self.spider_id = spider_id
 
     def parse(self, request, response):
         """网页解析"""

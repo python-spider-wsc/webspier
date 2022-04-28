@@ -41,7 +41,7 @@ def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_coun
         logger.setLevel(logging.DEBUG)
         stream_handler = logging.StreamHandler()
         stream_handler.stream = sys.stdout
-        formatter = logging.Formatter("%(filename)s[line:%(lineno)d] --  %(message)s")
+        formatter = logging.Formatter("[%(levelname)s]: %(filename)s[line:%(lineno)d] --  %(message)s")
         stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
@@ -61,11 +61,16 @@ class Log:
 
     def set_log_config(self, **kw):
         self.config = kw
+        path = self.config.get("path", ".")
+        file = self.config.get("name")
+        self.filename = os.path.join(path, file) if file else ""
     
     def __getattr__(self, name):
         # 调用log时再初始化，为了加载最新的setting
-        if name in ["set_log_filename", "filename"]:
+        if name in ["set_log_filename", "filename", "config"]:
             return self.__dict__.get(name)
+        if name == "filename":
+            return getattr(self, name)
         if self.__class__.log is None:
             self.__class__.log = get_logger(**self.__dict__.get("config", {}))
         return getattr(self.__class__.log, name)

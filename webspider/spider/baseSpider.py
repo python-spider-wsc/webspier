@@ -104,17 +104,21 @@ class BaseSpider():
         if not self.spider_id:
             return
         if self.task_mysql is None:
-            self.task_mysql = Items(settings.task_TABEL, unique_key=["task_code"])
-        ip = tools.get_service_ip()
-
-        self.task_mysql.save(task_code=self.task_id, spider_id=self.spider_id, )
+            self.task_mysql = Items(settings.TASK_TABLE, unique_key=["task_code"])
+        self.task_mysql.task_code = self.task_id
+        self.task_mysql.spider_id = self.spider_id
+        self.task_mysql.service = tools.get_service_ip()
+        self.task_mysql.process_id = tools.get_process_id()
+        self.task_mysql.logfile = log.filename or ""
+        self.task_mysql.save()
 
     def record_after(self):
         """任务保存到mysql"""
-        s = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
-        log.info("spider < %s > spent time: %s s", self.name, s)
+        spent_time = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
+        log.info("spider < %s > spent time: %s ", self.name, spent_time)
         if not self.spider_id:
-            return   
+            return
+        self.task_mysql.get_mysql().save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums) 
 
     @property
     def name(self):

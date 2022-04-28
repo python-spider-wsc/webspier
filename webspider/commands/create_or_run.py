@@ -74,7 +74,7 @@ class Record():
     def save_record_into_mysql(self, name, path):
         if not settings.DATABASES: # 没有配置mysql信息
             raise Exception("没有配置mysql信息")
-        self.table_spider.save(name=name, path=path, log=os.path.join(settings.LOG_PATH, name+'.log'))
+        self.table_spider.save(name=name, path=os.path.abspath(path), log=os.path.abspath(os.path.join(settings.LOG_PATH, name+'.log')))
 
 
 class Create(Record):
