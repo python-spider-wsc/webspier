@@ -61,7 +61,7 @@ class Log:
 
     def set_log_config(self, **kw):
         self.config = kw
-        path = self.config.get("path", ".")
+        path = self.config.get("path", settings.LOG_PATH)
         file = self.config.get("name")
         self.filename = os.path.join(path, file) if file else ""
     

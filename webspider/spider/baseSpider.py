@@ -11,7 +11,7 @@ from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.utils.log import log
 import datetime
-from webspider.db.items import Items
+from webspider.db.mysqlDB import BaseModel
 from webspider.config import settings
 from webspider.utils import tools
 import uuid
@@ -104,13 +104,8 @@ class BaseSpider():
         if not self.spider_id:
             return
         if self.task_mysql is None:
-            self.task_mysql = Items(settings.TASK_TABLE, unique_key=["task_code"])
-        self.task_mysql.task_code = self.task_id
-        self.task_mysql.spider_id = self.spider_id
-        self.task_mysql.service = tools.get_service_ip()
-        self.task_mysql.process_id = tools.get_process_id()
-        self.task_mysql.logfile = log.filename or ""
-        self.task_mysql.save()
+            self.task_mysql = BaseModel(settings.TASK_TABLE, unique_key=["task_code"])
+        self.task_mysql.save(task_code=self.task_id, spider_id = self.spider_id, service = tools.get_service_ip(), process_id = tools.get_process_id(), logfile = log.filename or "")
 
     def record_after(self):
         """任务保存到mysql"""
@@ -118,7 +113,7 @@ class BaseSpider():
         log.info("spider < %s > spent time: %s ", self.name, spent_time)
         if not self.spider_id:
             return
-        self.task_mysql.get_mysql().save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums) 
+        self.task_mysql.save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums) 
 
     @property
     def name(self):

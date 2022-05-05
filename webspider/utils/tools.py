@@ -63,3 +63,7 @@ def get_service_ip():
 def get_process_id():
     """获取正在运行的进程ID"""
     return os.getpid()
+
+def sleep(second):
+    """休眠时间"""
+    time.sleep(second)

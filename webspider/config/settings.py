@@ -4,6 +4,7 @@ USE_SESSION = False   # 是否启用会话
 USER_AGENT_TYPE = "chrome" # 随机请求头类型
 RETRY_TIMES = 2 # 失败重试次数
 SAVE_ERROR_RESPONSE = False
+SLEEP_TIME = 0 # 休眠时间（秒）
 ##############################################
 
 ###############日志模块的配置###################
@@ -23,6 +24,8 @@ REDIS_PORT = 6379
 REDIS_PWD = None
 REDIS_DB = 0
 REDIS_TYPE = "queue"
+# ------------------------------------------
+DATABASES = None
 ##############################################
 
 ############# 导入用户自定义的setting #############

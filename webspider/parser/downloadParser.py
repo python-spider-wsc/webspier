@@ -16,6 +16,7 @@ from webspider.core.request import Request
 from webspider.utils.log import log
 import traceback
 import time
+import sys
 
 class DownloadParser(baseParser.BaseParser):
     """
@@ -44,16 +45,15 @@ class DownloadParser(baseParser.BaseParser):
         except Exception as e:
             log.error("request error:")
             log.exception(e)
-            self.retry_request(request, None, traceback.format_exc())
+            self.retry_request(request, None)
             return
-        if not self.verify_reponse(request, response): # 验证结果失败
-            self.retry_request(request, response)
+        if not self.verify_reponse(request, response):
             return
         if request.save_response:
             self.save_response_into_mongo(request, response)
         # 直接使用回调函数处理，若是没有指定函数，直接使用spider.parse解析
         try:
-            callback = request.callback if getattr(request, "callback", None) else "parse"
+            callback = request.callback if getattr(request, "callback") else "parse"
             callback = getattr(self.spider, callback)
             result = callback(request, response)
             for item in (result or []):
@@ -64,29 +64,35 @@ class DownloadParser(baseParser.BaseParser):
             self.queue.success_nums += 1
         except Exception as e:
             self.queue.error_nums += 1 # 回调解析失败，保存结果，不再重试
-            self.save_response_into_mongo(request, response, col="error", trace=traceback.format_exc())
+            if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
+                self.save_response_into_mongo(request, response, col="error")
             log.error("parse error:")
             log.exception(e)
 
-    def save_response_into_mongo(self, request, response, col="spider", trace=""):
+    def save_response_into_mongo(self, request, response, col="task"):
         """保存请求结果到mongo"""
         if self.response_mongo is None:
             self.response_mongo = ResponseRecordMongo(col=col)
-        res = self.response_mongo.save_response(response, request, trace)
+        res = self.response_mongo.save_response(response, request, self.spider, trace=traceback.format_exc(), error=sys.exc_info()[1])
         if col=="error":
-            log.error("response save into mongo : %s", res.inserted_id)
+            log.info("response save into mongo : %s", res.inserted_id)
 
     def verify_reponse(self, request, response):
         """验证请求结果是否正确"""
         if response.status_code != 200:
             log.error("request error: status code is %s", response.status_code)
+            self.retry_request(request, response)
             return False
-        if getattr(request, "check_reponse", None):
-            return request.check_reponse(response)
-        else: # 假如没有指定check_reponse， 直接使用spider默认的check_reponse
-            return self.spider.check_reponse(response)
+        try:
+            check_reponse = getattr(request, "check_reponse", self.spider.check_reponse)
+            return check_reponse(response)
+        except Exception as e:
+            log.error("check reponse error")
+            log.exception(e)
+            self.retry_request(request, response)
+        return False
 
-    def retry_request(self, request, response, trace=""):
+    def retry_request(self, request, response):
         """重新请求"""
         request.retry_times += 1
         if request.retry_times<setting.RETRY_TIMES: # 小于重试次数
@@ -94,14 +100,9 @@ class DownloadParser(baseParser.BaseParser):
         self.queue.error_nums += 1
         log.error("request error: retry time %s", request.retry_times)
         if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
-            self.save_response_into_mongo(request, response, col="error", trace=trace) # 错误结果报错
+            self.save_response_into_mongo(request, response, col="error") # 错误结果保存
 
     def before_request(self, request):
         """请求之前的hook函数"""
         before_request = request.before_request if getattr(request, "before_request", None) else self.spider.before_request
         before_request(request)
-        
-
-         
-
-

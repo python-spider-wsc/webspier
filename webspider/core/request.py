@@ -4,6 +4,7 @@ import webspider.config.settings as setting
 from webspider.core import user_agent
 from webspider.core.response import MyResponse
 from webspider.utils.log import log
+from webspider.utils import tools
 
 class Request():
     user_agent_pool = user_agent
@@ -70,6 +71,8 @@ class Request():
         """
         获取带有selector功能的response
         """
+        # 每次请求的休眠时间
+        tools.sleep(self.__dict__.get("sleep_time", setting.SLEEP_TIME))
         # 设置超时默认时间
         self.requests_kwargs.setdefault("timeout", setting.REQUEST_TIMEOUT)
         # 随机user—agent

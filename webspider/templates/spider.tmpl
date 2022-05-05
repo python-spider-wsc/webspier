@@ -30,7 +30,7 @@ class ${object_name}(BaseSpider):
     
     def before_request(self, request):
         """请求之前的hook函数"""
-        request.random_user_agent=True
+        request.random_user_agent=True # 随机请求头
 
     def check_reponse(self, response):
         """检测请求的结果是否符合预期"""
