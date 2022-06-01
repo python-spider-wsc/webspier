@@ -11,7 +11,7 @@ from sys import version_info
 import os
 import setuptools
 
-print(os.system("webspider -e"))
+os.system("webspider -e")
 if version_info < (3, 6, 0):
     raise SystemExit("Sorry! webspider requires python 3.6.0 or later.")
 

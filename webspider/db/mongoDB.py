@@ -10,12 +10,15 @@ class ResponseRecordMongo():
         self.mydb = myclient[database]
         self.col = col
 
-    def save_response(self, response, request, spider, trace="", error=None):
+    def save_response(self, response, request, spider, trace, error):
         if request.retry_times>0:
             return
         mycol = self.mydb[self.col]
         data = {}
         if self.col != "error":
+            data["traceback"] = None
+            data["error_type"] = None
+        else:
             data["traceback"] = trace
             data["error_type"] = error
         data["response"] = response.text if response else ""

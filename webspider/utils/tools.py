@@ -6,10 +6,12 @@
 @Contact :   wsc352@126.com
 '''
 from webspider.utils.log import log
+from webspider.config import settings
 import time
 import sys, os
 import traceback
 import re
+import requests
 
 class TimerContextManager():
     """
@@ -67,3 +69,29 @@ def get_process_id():
 def sleep(second):
     """休眠时间"""
     time.sleep(second)
+
+def parseInt(value, point=2):
+    value = round(float(value), point)
+    if value%1==0:
+        return int(value)
+    return value
+
+
+def work_wechat_send_msg(text, key):
+    """企业微信群中的机器人
+        key：机器人的token   
+    """
+    headers = {
+        'Content-Type': 'application/json',
+    }
+    params = (
+        ('key', key),
+    )
+    data = {
+        "msgtype": "text",
+        "text": {
+            "mentioned_mobile_list":[],
+            "content": text,
+        }
+    }
+    response = requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send', headers=headers, params=params, json=data)

@@ -6,7 +6,7 @@
 @Contact :   wsc352@126.com
 '''
 import json
-import os
+import os, sys
 import getpass
 import datetime
 from webspider.config import settings
@@ -74,7 +74,7 @@ class Record():
     def save_record_into_mysql(self, name, path):
         if not settings.DATABASES: # 没有配置mysql信息
             raise Exception("没有配置mysql信息")
-        self.table_spider.save(name=name, path=os.path.abspath(path), log=os.path.abspath(os.path.join(settings.LOG_PATH, name+'.log')))
+        self.table_spider.save(name=name, path=os.path.abspath(path))
 
 
 class Create(Record):
@@ -143,21 +143,32 @@ class Running(Record):
         super(Running, self).__init__()
 
     def run(self, args):
+        path = self.record.get(args.name)
+        if path:
+            set_path = os.path.split(path)
+            if set_path[0] and set_path[0] not in sys.path:
+                sys.path.insert(0, set_path[0]) 
+                import importlib # 重新导包将settings路径加入path
+                importlib.reload(settings)
         if args.save_mysql:
-            res = self.table_spider.find({"name":args.name}, columns=("id", "path"))
+            # 指定save_mysql，文件和配置从mysql中取出
+            res = self.table_spider.find({"name":args.name}, columns=("id", "path", "save_response"))
             if not res:
                 raise Exception("MYSQL中不存在该爬虫")
-            spider_id = res["id"]
             path = res["path"]
-            os.system('python '+path+" --id "+str(spider_id))
+            bash = 'python '+path+" --id "+str(res["id"])
+            if args.save_response: # 首先判断命令行参数
+                bash += " --save_reposne"
+            elif args.save_response is None and res["save_response"]: # 如果命令行参数没有指定，再使用数据库中的配置
+                bash += " --save_reposne"
         else:
-            path = self.record.get(args.name) # 查看是否记录了运行文件
             if not path:
                 path = os.path.join(args.path, args.name+".py")
             if not os.path.exists(path): #没找到路径
                 raise Exception("未找到爬虫文件: {}, 请输入路径参数 --path".format(args.name))
-            os.system('python '+path)
+            bash = 'python '+path
         if args.name not in self.record:
             self.record[args.name] = os.path.abspath(path)
             self.save_record()
+        os.system(bash)
 

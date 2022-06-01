@@ -7,7 +7,6 @@
 @Desc    :   url解析器
 '''
 
-
 from webspider.db.mongoDB import ResponseRecordMongo
 import webspider.config.settings as setting
 from webspider.db.items import Items
@@ -28,6 +27,7 @@ class DownloadParser(baseParser.BaseParser):
         self.item_queue = item_queue
         self.response_mongo = None
         self.spider = spider
+        # self.foot = [] # 请求脚印
         
     def run(self):
         while self.run_flag:
@@ -39,17 +39,24 @@ class DownloadParser(baseParser.BaseParser):
                 time.sleep(0.5) # 队列为空，暂时休眠0.5s
     
     def deal_request(self, request):
+        status = 1
         try:
-            self.before_request(request)
+            res = self.before_request(request)
+            if res == False:
+                log.debug("跳过该请求：%s", request.url)
+                self.queue.nums -= 1
+                return
             response = request.get_response()
         except Exception as e:
             log.error("request error:")
             log.exception(e)
             self.retry_request(request, None)
+            self.save_request_track(0)
             return
         if not self.verify_reponse(request, response):
+            self.save_request_track(0)
             return
-        if request.save_response:
+        if self.spider.spider_id and (request.save_response or self.spider.save_response):
             self.save_response_into_mongo(request, response)
         # 直接使用回调函数处理，若是没有指定函数，直接使用spider.parse解析
         try:
@@ -63,11 +70,24 @@ class DownloadParser(baseParser.BaseParser):
                     self.item_queue.add(item)
             self.queue.success_nums += 1
         except Exception as e:
+            status = 0
             self.queue.error_nums += 1 # 回调解析失败，保存结果，不再重试
             if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
                 self.save_response_into_mongo(request, response, col="error")
             log.error("parse error:")
             log.exception(e)
+        self.save_request_track(status)
+        
+    def save_request_track(self, status):
+        """记录请求脚印"""
+        # if self.spider.task_mysql: # 请求日志可以保存到mysql
+        #     self.foot.append((self.spider.task_code, datetime.datetime.now(),status)) # 任务code, 时间， 状态
+        #     if len(self.foot)>1000:
+        #         sql = f"INSERT INTO {settings.REQUEST_TABLE} (task_code, date, status)VALUES(%s,%s,%s)"
+        #         self.spider.request_mysql.execute(sql, self.foot, category="many")
+        #         self.foot = []
+        pass
+
 
     def save_response_into_mongo(self, request, response, col="task"):
         """保存请求结果到mongo"""
@@ -85,6 +105,8 @@ class DownloadParser(baseParser.BaseParser):
             return False
         try:
             check_reponse = getattr(request, "check_reponse", self.spider.check_reponse)
+            if check_reponse is None:
+                return True
             return check_reponse(response)
         except Exception as e:
             log.error("check reponse error")
@@ -105,4 +127,5 @@ class DownloadParser(baseParser.BaseParser):
     def before_request(self, request):
         """请求之前的hook函数"""
         before_request = request.before_request if getattr(request, "before_request", None) else self.spider.before_request
+        self.record_length("请求未完成")
         before_request(request)

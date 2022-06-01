@@ -29,3 +29,8 @@ class MemoryDB(BaseMQ):
 
     def empty(self):
         return self.queue.empty()
+
+    @property
+    def length(self):
+        """获取队列的长度"""
+        return self.queue.qsize()

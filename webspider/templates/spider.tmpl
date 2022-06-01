@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
-"""
-Created  : {DATE}
----------
-@summary :
----------
-@author  : {USER}
-"""
+# -*- encoding: utf-8 -*-
+'''
+@Time    :   {DATE}
+@Author  :   {USER}
+@Version :   1.0
+@Contact :   
+@Desc    :   
+'''
 
 from webspider.spider.baseSpider import BaseSpider
 from webspider.core.request import Request
 from webspider.utils.log import log
 from webspider.db.memoryDB import MemoryDB  # 使用内置的queue作为队列
-
-def start_requests():
-    """初始化任务"""
-    yield Request(url="https://www.baidu.com")
 
 class ${object_name}(BaseSpider):
     name="${spider_name}"
@@ -24,6 +20,10 @@ class ${object_name}(BaseSpider):
         self.response_queue = MemoryDB() # 待解析队列
         self.database_queue = MemoryDB() # 待存储队列
 
+    def start_requests(self):
+        """初始化任务"""
+        yield Request(url="https://www.baidu.com")
+
     def parse(self, request, response):
         """网页解析"""
         pass
@@ -32,6 +32,10 @@ class ${object_name}(BaseSpider):
         """请求之前的hook函数"""
         request.random_user_agent=True # 随机请求头
 
+    def before_save(self, data):
+        """保存前的回调函数"""
+        pass
+
     def check_reponse(self, response):
         """检测请求的结果是否符合预期"""
         return True
@@ -39,4 +43,4 @@ class ${object_name}(BaseSpider):
 
 if __name__ == "__main__":
     # log.set_log_config(name="${spider_name}.log") # 日志的存储位置
-    ${object_name}(start_requests).run()
+    ${object_name}().run()

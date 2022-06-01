@@ -21,28 +21,29 @@ def parse_cmdline_args():
     import argparse
     argparser = argparse.ArgumentParser(description="spider record manager")
     argparser.add_argument("--id", type=int, help="spider id")
+    argparser.add_argument("--save", type=int, help="spider id")
     args = argparser.parse_args()
-    return args.id
+    return args.id, args.save
 
 class BaseSpider():
     """爬虫的接口类"""
-    def __init__(self, distribute_tasks, thread_nums=1, **kwargs):
+    def __init__(self, distribute_tasks="start_requests", thread_nums=1, **kwargs):
         self.thread_nums = thread_nums
-        self.start_request = distribute_tasks
-        self.task_mysql =None
-        self.spider_id = parse_cmdline_args()
-        self.task_id = uuid.uuid4()
+        self.start_request_func = getattr(self, distribute_tasks)
+        self.task_mysql = None
+        self.request_mysql = None
+        self.spider_id, self.save_response = parse_cmdline_args()
+        self.task_id = str(uuid.uuid1())
 
     def call_end(self):
-        """
-        抓取结束后的回调函数
-        """
+        """抓取结束后的回调函数"""
         pass
 
     def call_start(self):
-        """
-        抓取开始前的回调函数
-        """
+        """抓取开始前的回调函数"""
+        pass
+
+    def start_requests(self):
         pass
 
     def before_request(self, request):
@@ -51,6 +52,14 @@ class BaseSpider():
 
     def after_request(self, request, response):
         """请求之前的hook函数"""
+        pass
+
+    def before_save(self, data):
+        """保存前的回调函数"""
+        pass
+
+    def after_save(self, data):
+        """保存之后的回调函数"""
         pass
 
     def parse(self,request, response):
@@ -64,25 +73,26 @@ class BaseSpider():
 
     def run(self):
         self.record_before()
-        for request in self.start_request(): # 初始请求
-            self.response_queue.add(request)
         self.call_start()
+        for request in self.start_request_func(): # 初始请求
+            self.response_queue.add(request)
         threads = []
+        database_thread = DatabaseParser(self.database_queue, self)
+        database_thread.start()
         for _ in range(self.thread_nums):
-            database_thread = DatabaseParser(self.database_queue)
-            database_thread.start()
             download_thread = DownloadParser(self.response_queue, self.database_queue, self)
             download_thread.start()
-            threads.append(database_thread)
             threads.append(download_thread)
 
         # 当两个队列全部为空时，认为线程结束了
         while not self.all_thread_is_done():
-            time.sleep(2)
+            time.sleep(3)
         
         for thread in threads:
             thread.stop()
             thread.join()
+        database_thread.stop()
+        database_thread.join()
         self.call_end()
         self.record_after()
 
@@ -105,15 +115,26 @@ class BaseSpider():
             return
         if self.task_mysql is None:
             self.task_mysql = BaseModel(settings.TASK_TABLE, unique_key=["task_code"])
+            self.request_mysql = BaseModel(settings.REQUEST_TABLE)
         self.task_mysql.save(task_code=self.task_id, spider_id = self.spider_id, service = tools.get_service_ip(), process_id = tools.get_process_id(), logfile = log.filename or "")
+    
+    def send_msg(self, cost_time):
+        key = self.__dict__.get("wechat_key") or settings.WORKWECHATKEY
+        if key:
+            text = "爬虫{}运行完成, 共耗时{}".format(self.name, cost_time)
+            tools.work_wechat_send_msg(text, key)
 
     def record_after(self):
         """任务保存到mysql"""
         spent_time = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
         log.info("spider < %s > spent time: %s ", self.name, spent_time)
+        self.send_msg(spent_time)
         if not self.spider_id:
             return
-        self.task_mysql.save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums) 
+        self.task_mysql.save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, 
+                             success_nums=self.response_queue.success_nums, end_time=datetime.datetime.now(),
+                             save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
+        log.info("spider < %s > finish", self.name)
 
     @property
     def name(self):

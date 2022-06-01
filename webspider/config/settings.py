@@ -18,6 +18,12 @@ LOG_PATH = "logs"
 ##############################################
 
 ###############数据库相关配置###################
+# -------------爬虫的几张表--------------------
+MYSQL = dict(host=None, user="root", password=None, database=None, port=3306)
+SPIDER_TABEL = "wsc_spider"
+TASK_TABLE = "wsc_task"
+SERVICE_TABLE = "wsc_service"
+REQUEST_TABLE = "wsc_request"
 # -----------------redis----------------------
 REDIS_HOST = None
 REDIS_PORT = 6379
@@ -28,7 +34,19 @@ REDIS_TYPE = "queue"
 DATABASES = None
 ##############################################
 
-############# 导入用户自定义的setting #############
+###############消息推送###################
+WORKWECHATKEY=None
+##############################################
+
+############# 导入公用的爬虫setting #############
+try:
+    import os, sys
+    sys.path.insert(0, os.getenv("SettingPath"))
+    from setting import *
+except:
+    pass
+
+############# 导入公每个爬虫各自的setting #############
 try:
     from settings import *
 except:

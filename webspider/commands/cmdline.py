@@ -9,6 +9,7 @@
 import argparse
 from webspider.commands.create_or_run import Create, Running
 
+
 def execute():
     parser = argparse.ArgumentParser(description='webspider command:')
     parser.add_argument('action', type=str, help='命令行必填参数',nargs='?', default=None, choices=["create", "run"])
@@ -17,6 +18,7 @@ def execute():
     parser.add_argument('-c', '--check', nargs='?', const=True, help='剔除无效爬虫')
     parser.add_argument('-e', '--export', nargs='?', const=True, help='导出爬虫列表文件')
     parser.add_argument('--save_mysql', nargs='?', const=True, help='将爬虫记录保存到mysql')
+    parser.add_argument('--save_response', nargs='?', const=True, help='将中间响应结果保存到mongo')
     args = parser.parse_args()
     if args.action:
         if not args.name:
