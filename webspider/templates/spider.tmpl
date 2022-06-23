@@ -36,7 +36,7 @@ class ${object_name}(BaseSpider):
         """保存前的回调函数"""
         pass
 
-    def check_reponse(self, response):
+    def check_reponse(self, request,  response):
         """检测请求的结果是否符合预期"""
         return True
 

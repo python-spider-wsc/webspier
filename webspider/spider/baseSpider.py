@@ -21,7 +21,7 @@ def parse_cmdline_args():
     import argparse
     argparser = argparse.ArgumentParser(description="spider record manager")
     argparser.add_argument("--id", type=int, help="spider id")
-    argparser.add_argument("--save", type=int, help="spider id")
+    argparser.add_argument("--save", type=int, nargs='?', const=True, help="save response into mongodb")
     args = argparser.parse_args()
     return args.id, args.save
 

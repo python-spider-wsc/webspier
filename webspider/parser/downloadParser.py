@@ -9,7 +9,7 @@
 
 from webspider.db.mongoDB import ResponseRecordMongo
 import webspider.config.settings as setting
-from webspider.db.items import Items
+from webspider.db.items import ItemsInterface
 from webspider.parser import baseParser
 from webspider.core.request import Request
 from webspider.utils.log import log
@@ -66,7 +66,7 @@ class DownloadParser(baseParser.BaseParser):
             for item in (result or []):
                 if isinstance(item, Request):
                     self.queue.add(item)
-                elif isinstance(item, Items):
+                elif isinstance(item, ItemsInterface):
                     self.item_queue.add(item)
             self.queue.success_nums += 1
         except Exception as e:
@@ -107,7 +107,7 @@ class DownloadParser(baseParser.BaseParser):
             check_reponse = getattr(request, "check_reponse", self.spider.check_reponse)
             if check_reponse is None:
                 return True
-            return check_reponse(response)
+            return check_reponse(request, response)
         except Exception as e:
             log.error("check reponse error")
             log.exception(e)

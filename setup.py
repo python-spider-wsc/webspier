@@ -8,10 +8,8 @@
 
 from os.path import dirname, join
 from sys import version_info
-import os
 import setuptools
 
-os.system("webspider -e")
 if version_info < (3, 6, 0):
     raise SystemExit("Sorry! webspider requires python 3.6.0 or later.")
 
@@ -25,8 +23,8 @@ requires = [
     "DBUtils>=2.0",
     "PyMySQL>=0.9.3",
     "redis>=2.10.6,<4.0.0",
-    "requests>=2.22.0",
-    "pymongo>=3.10.1",
+    "requests==2.25.1",
+    "pymongo==3.2",
     "urllib3>=1.22",
 ]
 

@@ -8,7 +8,27 @@
 
 from webspider.db.mysqlDB import BaseModel
 
-class Items():
+class ItemsInterface():
+
+    def __init__(self, save_callback="save"):
+        self.callback = getattr(self, save_callback) # 指定保存的回调函数
+
+    def to_dict(self):
+        """抓取到的数据对象变为字典"""
+        pass
+
+    def save(self):
+        """保存数据"""
+        pass
+
+    def __str__(self):
+        return str(self.to_dict())
+
+    def update(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
+class Items(ItemsInterface):
 
     _model = None
 
@@ -17,9 +37,6 @@ class Items():
         if cls._model is None:
             cls._model = BaseModel(cls._table_name, unique_key=getattr(cls, "_unique_key", None))
         return cls._model
-
-    def __init__(self, save_callback="save"):
-        self.callback = getattr(self, save_callback)# 指定保存的回调函数
 
     def save(self):
         if self.__class__.model():
@@ -38,8 +55,3 @@ class Items():
     def mysql(self):
         return self.__class__.model()
 
-    def __str__(self):
-        return str(self.to_dict())
-
-    def update(self, **kwargs):
-        self.__dict__.update(kwargs)
