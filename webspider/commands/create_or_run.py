@@ -160,7 +160,7 @@ class Running(Record):
             path = res["path"]
             if not os.path.exists(path):
                 path=os.path.abspath(os.path.join(os.getenv("SettingPath"), "../..", path))
-            bash = 'python3 '+path+" --id "+str(res["id"])
+            bash = 'python '+path+" --id "+str(res["id"])
             if args.save_response: # 首先判断命令行参数
                 bash += " --save"
             elif args.save_response is None and res["save_response"]: # 如果命令行参数没有指定，再使用数据库中的配置

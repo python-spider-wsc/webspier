@@ -11,8 +11,8 @@ from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
 from webspider.utils.log import log
 import datetime
-from webspider.db.mysqlDB import BaseModel
 from webspider.config import settings
+from webspider.db.mysqlDB import BaseModel
 from webspider.utils import tools
 import uuid
 
@@ -30,8 +30,8 @@ class BaseSpider():
     def __init__(self, distribute_tasks="start_requests", thread_nums=1, **kwargs):
         self.thread_nums = thread_nums
         self.start_request_func = getattr(self, distribute_tasks)
-        self.task_mysql = None
         self.request_mysql = None
+        self.task_mysql = None
         self.spider_id, self.save_response = parse_cmdline_args()
         self.task_id = str(uuid.uuid1())
 
@@ -71,9 +71,7 @@ class BaseSpider():
     def check_reponse(self, response):
         return True
 
-    def run(self):
-        self.record_before()
-        self.call_start()
+    def run_task(self):
         for request in self.start_request_func(): # 初始请求
             self.response_queue.add(request)
         threads = []
@@ -93,7 +91,13 @@ class BaseSpider():
             thread.join()
         database_thread.stop()
         database_thread.join()
-        self.call_end()
+
+    def run(self):
+        self.record_before()
+        with tools.SpiderContextManager(self.task_mysql, self.task_id):
+            self.call_start()
+            self.run_task()
+            self.call_end()
         self.record_after()
 
     def all_thread_is_done(self):
@@ -115,9 +119,8 @@ class BaseSpider():
             return
         if self.task_mysql is None:
             self.task_mysql = BaseModel(settings.TASK_TABLE, unique_key=["task_code"])
-            self.request_mysql = BaseModel(settings.REQUEST_TABLE)
         self.task_mysql.save(task_code=self.task_id, spider_id = self.spider_id, service = tools.get_service_ip(), process_id = tools.get_process_id(), logfile = log.filename or "")
-    
+
     def send_msg(self, cost_time):
         key = self.__dict__.get("wechat_key") or settings.WORKWECHATKEY
         if key:
@@ -131,8 +134,7 @@ class BaseSpider():
         self.send_msg(spent_time)
         if not self.spider_id:
             return
-        self.task_mysql.save(task_code=self.task_id, status=1, request_nums=self.response_queue.nums, 
-                             success_nums=self.response_queue.success_nums, end_time=datetime.datetime.now(),
+        self.task_mysql.save(task_code=self.task_id, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
                              save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
         log.info("spider < %s > finish", self.name)
 
