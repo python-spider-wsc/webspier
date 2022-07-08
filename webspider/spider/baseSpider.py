@@ -94,11 +94,15 @@ class BaseSpider():
 
     def run(self):
         self.record_before()
-        with tools.SpiderContextManager(self.task_mysql, self.task_id):
+        status = 1
+        try:
             self.call_start()
             self.run_task()
             self.call_end()
-        self.record_after()
+        except:
+            status = 2
+        finally:
+            self.record_after(status)
 
     def all_thread_is_done(self):
         for _ in range(3): # 多检测几次，防止误杀
@@ -121,20 +125,22 @@ class BaseSpider():
             self.task_mysql = BaseModel(settings.TASK_TABLE, unique_key=["task_code"])
         self.task_mysql.save(task_code=self.task_id, spider_id = self.spider_id, service = tools.get_service_ip(), process_id = tools.get_process_id(), logfile = log.filename or "")
 
-    def send_msg(self, cost_time):
+    def send_msg(self, cost_time, status):
+        status = "成功" if status==1 else "失败"
         key = self.__dict__.get("wechat_key") or settings.WORKWECHATKEY
         if key:
-            text = "爬虫{}运行完成, 共耗时{}".format(self.name, cost_time)
+            text = "爬虫{}运行{}, 共耗时{}".format(self.name, status, cost_time)
             tools.work_wechat_send_msg(text, key)
 
-    def record_after(self):
+    def record_after(self, status=1):
         """任务保存到mysql"""
         spent_time = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
         log.info("spider < %s > spent time: %s ", self.name, spent_time)
-        self.send_msg(spent_time)
+        self.send_msg(spent_time, status)
         if not self.spider_id:
             return
-        self.task_mysql.save(task_code=self.task_id, request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
+        self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now(),
+                             request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
                              save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
         log.info("spider < %s > finish", self.name)
 

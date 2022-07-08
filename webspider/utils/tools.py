@@ -35,26 +35,6 @@ class TimerContextManager():
             error = ''.join(traceback.format_tb(exc_tb))+ exc_str
             log.error(error)
 
-class SpiderContextManager():
-    """
-    记录爬虫抓取行为的管理器
-    """
-    def __init__(self, task_mysql, task_id=None):
-        self.task_mysql=task_mysql
-        self.task_id=task_id
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        status = 2 if exc_type else 1 
-        if self.task_mysql:
-            self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now())
-        if exc_type:
-            exc_str = str(exc_type) + '  :  ' + str(exc_val)
-            error = ''.join(traceback.format_tb(exc_tb))+ exc_str
-            log.error(error)
-
 def spiderDecorator(name):
     """记录爬虫任务运行时间，并记下日志"""
     def spent_time(func):
