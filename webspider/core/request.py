@@ -21,6 +21,7 @@ class Request():
         callback=None,
         use_session=None,
         save_response = False,
+        priority = 0,
         **kwargs,
     ):
         self.method=method
@@ -30,6 +31,7 @@ class Request():
         self.callback = callback
         self.use_session = setting.USE_SESSION if use_session is None else use_session  # self.use_session 优先级高
         self.save_response = save_response  # 是否保存请求结果
+        self.priority = priority
 
         self.requests_kwargs = {}
         for key, value in kwargs.items():
@@ -86,4 +88,10 @@ class Request():
         else:
             response = requests.request(self.method, self.url, **self.requests_kwargs)
         return MyResponse(response)
+
+    def __gt__(self,other): #优先级比较
+       return self.priority<other.priority
+
+    def __ge__(self,other): #优先级比较
+       return self.priority<=other.priority
 

@@ -11,11 +11,10 @@ import queue
 from webspider.db.baseMQ import BaseMQ
 
 class MemoryDB(BaseMQ):
-    def __init__(self):
+    def __init__(self, category="queue"):
         super(MemoryDB, self).__init__()
-        self.queue = queue.Queue()
+        self.queue = queue.Queue() if category=="queue" else queue.LifoQueue() if category=="stack" else queue.PriorityQueue()
         
-
     def add(self, item):
         self.nums += 1
         self.queue.put(item)

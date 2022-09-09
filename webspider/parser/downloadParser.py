@@ -42,7 +42,7 @@ class DownloadParser(baseParser.BaseParser):
         status = 1
         try:
             res = self.before_request(request)
-            if res == False:
+            if res is False:
                 log.debug("跳过该请求：%s", request.url)
                 self.queue.nums -= 1
                 return
@@ -101,8 +101,6 @@ class DownloadParser(baseParser.BaseParser):
         """验证请求结果是否正确"""
         if response.status_code != 200:
             log.error("request error: status code is %s", response.status_code)
-            self.retry_request(request, response)
-            return False
         try:
             check_reponse = getattr(request, "check_reponse", self.spider.check_reponse)
             if check_reponse is None:
@@ -128,4 +126,4 @@ class DownloadParser(baseParser.BaseParser):
         """请求之前的hook函数"""
         before_request = request.before_request if getattr(request, "before_request", None) else self.spider.before_request
         self.record_length("请求未完成")
-        before_request(request)
+        return before_request(request)

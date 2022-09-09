@@ -9,6 +9,7 @@
 import time
 from webspider.parser.databaseParser import DatabaseParser
 from webspider.parser.downloadParser import DownloadParser
+from webspider.db.memoryDB import MemoryDB  # 使用内置的queue作为队列
 from webspider.utils.log import log
 import datetime
 from webspider.config import settings
@@ -28,6 +29,8 @@ def parse_cmdline_args():
 class BaseSpider():
     """爬虫的接口类"""
     def __init__(self, distribute_tasks="start_requests", thread_nums=1, **kwargs):
+        self.response_queue = MemoryDB() # 待解析队列
+        self.database_queue = MemoryDB() # 待存储队列
         self.thread_nums = thread_nums
         self.start_request_func = getattr(self, distribute_tasks)
         self.request_mysql = None
@@ -99,20 +102,23 @@ class BaseSpider():
             self.call_start()
             self.run_task()
             self.call_end()
-        except:
+        except Exception as e:
+            log.error(e)
+            log.exception(e)
             status = 2
         finally:
             self.record_after(status)
 
     def all_thread_is_done(self):
-        for _ in range(3): # 多检测几次，防止误杀
+        for i in range(12): # 多检测几次，防止误杀
             if not (self.response_queue.empty() and self.database_queue.empty()):
                 return False
             # 计算失败和成功的比值，当失败率达到50%，强制停止
-            if self.response_queue.error_nums>self.response_queue.success_nums and self.response_queue.nums>100:
+            if i%3==0 and self.response_queue.error_nums>self.response_queue.success_nums and self.response_queue.nums>100:
                 log.error("失败次数多于成功次数，已停止爬虫")
-                return False
-            time.sleep(1)
+                return True
+            time.sleep(0.3)
+            log.info("第%s次队列已空", i)
         return True
 
     def record_before(self):
@@ -129,20 +135,29 @@ class BaseSpider():
         status = "成功" if status==1 else "失败"
         key = self.__dict__.get("wechat_key") or settings.WORKWECHATKEY
         if key:
-            text = "爬虫{}运行{}, 共耗时{}".format(self.name, status, cost_time)
+            text = "爬虫{}运行{}, 共耗时{}, 请求成功{}次,失败{}次,保存{}条数据".format(self.name, status, cost_time, self.response_queue.success_nums, self.response_queue.error_nums, self.database_queue.success_nums)
             tools.work_wechat_send_msg(text, key)
 
     def record_after(self, status=1):
         """任务保存到mysql"""
         spent_time = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
         log.info("spider < %s > spent time: %s ", self.name, spent_time)
-        self.send_msg(spent_time, status)
         if not self.spider_id:
             return
+        self.send_msg(spent_time, status)
         self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now(),
                              request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
                              save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
         log.info("spider < %s > finish", self.name)
+    
+    def test(self, *args, **kwargs):
+        self.test_requests(*args, **kwargs)
+        self.run_task()
+    
+    def test_requests(self, *args, **kwargs):
+        for request in self.start_request_func(): # 初始请求
+            self.response_queue.add(request)
+            break
 
     @property
     def name(self):

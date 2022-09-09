@@ -13,7 +13,6 @@ import sys, os
 import traceback
 import re
 import requests
-import datetime
 
 class TimerContextManager():
     """
