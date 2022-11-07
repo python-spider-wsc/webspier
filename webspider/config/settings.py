@@ -12,7 +12,7 @@ LOG_LEVEL= "DEBUG"
 LOG_MAX_BYTES = 10 * 1024 * 1024
 LOG_BACKUP_COUNT = 5
 LOG_ENCODING = "utf8"
-LOG_FORMAT = "[%(asctime)s] [%(levelname)s] [<pid: %(process)s>] [<tid: %(thread)d>] -- %(filename)s[line:%(lineno)d] %(message)s"
+LOG_FORMAT = "%(asctime)s %(levelname)s [pid: %(process)s-tid: %(thread)d] [%(filename)s] [%(module)s] [%(funcName)s] [%(lineno)d]: %(message)s"
 PRINT_EXCEPTION_DETAILS = True
 LOG_PATH = "logs"
 ##############################################
@@ -35,7 +35,8 @@ DATABASES = None
 ##############################################
 
 ###############消息推送###################
-WORKWECHATKEY=None
+WORKWECHATKEY=None        # 成功消息
+WORKWECHATERRORKEY=None   # 失败消息
 ##############################################
 
 ############# 导入公用的爬虫setting #############

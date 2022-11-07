@@ -55,3 +55,10 @@ class Items(ItemsInterface):
     def mysql(self):
         return self.__class__.model()
 
+    def get(self, name, default=None):
+        return self.__dict__.get(name, default)
+
+    def set(self, name, value):
+        self.__dict__[name]=value
+        return value
+

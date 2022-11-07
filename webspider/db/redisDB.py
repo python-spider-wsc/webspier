@@ -40,11 +40,13 @@ class RedisDB(BaseMQ):
         return self.redis.ping()
 
     def add(self, item, **kwargs):
+        super().add()
         item = pickle.dumps(item) # 序列化
         table = kwargs.get("talbe", self.table)
         self.nums += 1
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["add"])
         func(table, item)
+
 
     def get(self, **kwargs):
         table = kwargs.get("talbe", self.table)

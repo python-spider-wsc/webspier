@@ -16,6 +16,7 @@ class MemoryDB(BaseMQ):
         self.queue = queue.Queue() if category=="queue" else queue.LifoQueue() if category=="stack" else queue.PriorityQueue()
         
     def add(self, item):
+        super().add()
         self.nums += 1
         self.queue.put(item)
 

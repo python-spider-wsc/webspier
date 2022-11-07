@@ -8,11 +8,14 @@
 
 import argparse
 from webspider.commands.create_or_run import Create, Running
+from webspider.utils.log import log
+
+log.set_log_config(name="webspider.log")
 
 
 def execute():
     parser = argparse.ArgumentParser(description='webspider command:')
-    parser.add_argument('action', type=str, help='命令行必填参数',nargs='?', default=None, choices=["create", "run"])
+    parser.add_argument('action', type=str, help='命令行必填参数', nargs='?', default=None, choices=["create", "run"])
     parser.add_argument('--path', default=".", help='爬虫的路径')
     parser.add_argument('-n', '--name', help='爬虫的名字')
     parser.add_argument('-c', '--check', nargs='?', const=True, help='剔除无效爬虫')

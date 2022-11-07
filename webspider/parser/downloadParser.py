@@ -28,6 +28,7 @@ class DownloadParser(baseParser.BaseParser):
         self.response_mongo = None
         self.spider = spider
         # self.foot = [] # 请求脚印
+        self.error_collections={}
         
     def run(self):
         while self.run_flag:
@@ -37,6 +38,11 @@ class DownloadParser(baseParser.BaseParser):
                     self.deal_request(request)
             else:
                 time.sleep(0.5) # 队列为空，暂时休眠0.5s
+
+    def next_request(self, request):
+        next = self.spider.next_request(request)
+        if isinstance(next, Request):
+            self.queue.add(next)
     
     def deal_request(self, request):
         status = 1
@@ -45,6 +51,7 @@ class DownloadParser(baseParser.BaseParser):
             if res is False:
                 log.debug("跳过该请求：%s", request.url)
                 self.queue.nums -= 1
+                self.next_request(request)
                 return
             response = request.get_response()
         except Exception as e:
@@ -53,7 +60,13 @@ class DownloadParser(baseParser.BaseParser):
             self.retry_request(request, None)
             self.save_request_track(0)
             return
-        if not self.verify_reponse(request, response):
+        verify_flag = self.verify_reponse(request, response)
+        if verify_flag == "continue": # 验证失败继续下次请求
+            log.error("check response failed, continue next request")
+            self.next_request(request)
+            return
+        elif not verify_flag: # 返回结果验证失败，结束请求
+            log.error("check response failed, stop request")
             self.save_request_track(0)
             return
         if self.spider.spider_id and (request.save_response or self.spider.save_response):
@@ -67,6 +80,8 @@ class DownloadParser(baseParser.BaseParser):
                 if isinstance(item, Request):
                     self.queue.add(item)
                 elif isinstance(item, ItemsInterface):
+                    if self.spider.test_flag:
+                        print(item)
                     self.item_queue.add(item)
             self.queue.success_nums += 1
         except Exception as e:
@@ -93,12 +108,14 @@ class DownloadParser(baseParser.BaseParser):
         """保存请求结果到mongo"""
         if self.response_mongo is None:
             self.response_mongo = ResponseRecordMongo(col=col)
-        res = self.response_mongo.save_response(response, request, self.spider, trace=traceback.format_exc(), error=sys.exc_info()[1])
-        if col=="error":
+        res = self.response_mongo.save_response(response, request, self.spider, trace=traceback.format_exc(), error=repr(sys.exc_info()[1]))
+        if col=="error" and res:
             log.info("response save into mongo : %s", res.inserted_id)
 
     def verify_reponse(self, request, response):
         """验证请求结果是否正确"""
+        if self.spider.test_flag:
+            print(response.text)
         if response.status_code != 200:
             log.error("request error: status code is %s", response.status_code)
         try:
@@ -109,6 +126,9 @@ class DownloadParser(baseParser.BaseParser):
         except Exception as e:
             log.error("check reponse error")
             log.exception(e)
+            if repr(e) not in self.error_collections:
+                self.error_collections[repr(e)] = {"name":"请求结果检查", "nums":0}
+            self.error_collections[repr(e)]["nums"] += 1 
             self.retry_request(request, response)
         return False
 
@@ -117,6 +137,8 @@ class DownloadParser(baseParser.BaseParser):
         request.retry_times += 1
         if request.retry_times<setting.RETRY_TIMES: # 小于重试次数
             self.queue.add(request)
+        else: # 失败之后继续后续请求
+            self.next_request(request)
         self.queue.error_nums += 1
         log.error("request error: retry time %s", request.retry_times)
         if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):

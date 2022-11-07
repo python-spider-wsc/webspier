@@ -14,14 +14,19 @@ class ${object_name}(BaseSpider):
     name="${spider_name}"
 
     def __init__(self, *args, **kwargs):
+        """仅用作变量声明，禁止函数调用，避免函数错误无法捕捉"""
         super(${object_name}, self).__init__(*args, **kwargs)
 
     def start_requests(self):
-        """初始化任务"""
+        """初始化任务及初始化函数调用"""
         yield Request(url="https://www.baidu.com")
 
     def parse(self, request, response):
         """网页解析"""
+        yield self.next_request(reqeust)
+
+    def next_request(self, request):
+        """解析完一个请求之后的请求"""
         pass
     
     def before_request(self, request):
