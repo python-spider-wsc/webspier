@@ -101,6 +101,7 @@ class BaseSpider():
     def run(self):
         self.record_before()
         status = 1
+        errors = {}
         try:
             self.call_start()
             for request in self.start_request_func(): # 初始请求
@@ -133,8 +134,8 @@ class BaseSpider():
     def record_before(self):
         """任务保存到mysql之前的初始化工作"""
         log.info("spider < %s > start running", self.name)
-        # if not self.spider_id:
-        #     return
+        if not self.spider_id:
+            return
         if self.task_mysql is None:
             self.task_mysql = BaseModel(settings.TASK_TABLE, unique_key=["task_code"])
         self.task_mysql.save(task_code=self.task_id, spider_id = self.spider_id or 0, service = tools.get_service_ip(), process_id = tools.get_process_id(), logfile = log.filename or "")
@@ -157,8 +158,8 @@ class BaseSpider():
         """任务保存到mysql"""
         spent_time = tools.formatSecond((datetime.datetime.now()-self.start_time).seconds)
         log.info("spider < %s > spent time: %s ", self.name, spent_time)
-        # if not self.spider_id:
-        #     return
+        if not self.spider_id:
+            return
         self.send_msg(spent_time, status, errors=errors)
         self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now(),
                              request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 

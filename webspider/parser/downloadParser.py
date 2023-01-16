@@ -106,11 +106,15 @@ class DownloadParser(baseParser.BaseParser):
 
     def save_response_into_mongo(self, request, response, col="task"):
         """保存请求结果到mongo"""
-        if self.response_mongo is None:
-            self.response_mongo = ResponseRecordMongo(col=col)
-        res = self.response_mongo.save_response(response, request, self.spider, trace=traceback.format_exc(), error=repr(sys.exc_info()[1]))
-        if col=="error" and res:
-            log.info("response save into mongo : %s", res.inserted_id)
+        try:
+            if self.response_mongo is None:
+                self.response_mongo = ResponseRecordMongo(col=col)
+            res = self.response_mongo.save_response(response, request, self.spider, trace=traceback.format_exc(), error=repr(sys.exc_info()[1]))
+            if col=="error" and res:
+                log.info("response save into mongo : %s", res.inserted_id)
+        except Exception as e:
+            log.error(e)
+            log.exception(e)
 
     def verify_reponse(self, request, response):
         """验证请求结果是否正确"""

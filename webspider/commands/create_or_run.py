@@ -161,7 +161,7 @@ class Running(Record):
             path = res["path"]
             if not os.path.exists(path):
                 path=os.path.abspath(os.path.join(os.getenv("SettingPath"), "../..", path))
-            bash = 'python '+path+" --id "+str(res["id"])
+            bash = 'python3 '+path+" --id "+str(res["id"])
             if args.save_response: # 首先判断命令行参数
                 bash += " --save"
             elif args.save_response is None and res["save_response"]: # 如果命令行参数没有指定，再使用数据库中的配置
@@ -171,7 +171,7 @@ class Running(Record):
                 path = os.path.join(args.path, args.name+".py")
             if not os.path.exists(path): #没找到路径
                 raise Exception("未找到爬虫文件: {}, 请输入路径参数 --path".format(args.name))
-            bash = 'python '+path
+            bash = 'python3 '+path
         if args.name not in self.record:
             self.record[args.name] = os.path.abspath(path)
             self.save_record()

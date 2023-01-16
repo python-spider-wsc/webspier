@@ -23,7 +23,7 @@ class ResponseRecordMongo():
             data["traceback"] = trace
             data["error_type"] = error
         data["response"] = response.text if response else ""
-        data["date"] = datetime.datetime.now()
+        data["date"] = str(datetime.datetime.now())
         data["status_code"] = response.status_code if response else 0
         data["request"] = request.requests_kwargs
         data["task_id"] = spider.task_id
