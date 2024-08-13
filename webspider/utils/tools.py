@@ -62,6 +62,7 @@ class TaskRecordContextManager():
             exc_str = str(exc_type) + '  :  ' + str(exc_val)
             error = ''.join(traceback.format_tb(exc_tb))+ exc_str
             log.error(error)
+            work_wechat_send_msg(f"任务出错，file:{self._file_name}", settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES)
         if self.spider_id:
             self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now())
 
@@ -109,7 +110,7 @@ def parseInt(value, point=2):
     return value
 
 
-def work_wechat_send_msg(text, key, mobile_list=None):
+def work_wechat_send_msg(text, key, mobile_list=None, msg_type="text"):
     """企业微信群中的机器人
         key：机器人的token,
         mobile_list: 提醒人的手机号列表  
@@ -122,10 +123,10 @@ def work_wechat_send_msg(text, key, mobile_list=None):
         ('key', key),
     )
     data = {
-        "msgtype": "text",
-        "text": {
+        "msgtype": msg_type,
+        msg_type: {
             "mentioned_mobile_list":mobile_list,
-            "content": text,
+            "content": text
         }
     }
     requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send', headers=headers, params=params, json=data)

@@ -10,9 +10,11 @@
 import redis
 from redis.exceptions import ConnectionError
 from webspider.config import settings
-from webspider.utils.log import log
 from webspider.db.baseMQ import BaseMQ
 import pickle
+import requests
+import json
+
 
 class RedisDB(BaseMQ):
     FUNC_MAP = {
@@ -20,39 +22,64 @@ class RedisDB(BaseMQ):
         "queue":{"add":"lpush", "get":"rpop", "empty":"llen"}
     }
     
-    def __init__(self, table, host=settings.REDIS_HOST, port=settings.REDIS_PORT,pwd=settings.REDIS_PWD, db=settings.REDIS_DB, category=settings.REDIS_TYPE, decode_responses=True, max_connections=1000, **kwarg):
+    def __init__(self, table, category=settings.REDIS_TYPE, serialize="pickle", **kwarg):
         super(RedisDB, self).__init__()
-        self.host = host
-        self.port = port
-        self.pwd = pwd
-        self.db = db
         self.category = category
-        self.decode_responses = decode_responses
-        self.max_connections = max_connections
         self.table = table
-        self.reconnect()
+        self.connect(**kwarg)
+        self.serialize = serialize
 
-    def reconnect(self):
-        if not self.host:
+    @classmethod
+    def get_redis_config(cls):
+        headers = {
+            'Connection': 'keep-alive',
+            'Authorization': 'Basic '+settings.REDIS_Authorization,
+            'Upgrade-Insecure-Requests': '1',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36',
+        }
+        response = requests.get(settings.REDIS_URL, headers=headers,verify=False)
+        res = response.json()
+        data = {}
+        data['host'], data['port']= res[0]['instances'][0]['ip'].split(':')
+        data['password'] = res[0]['instances'][0]['password']
+        return data
+
+    def connect(self, **kwarg):
+        if not settings.REDIS_URL:
             raise ConnectionError("无redis配置信息, 请配置。。。")
-        POOL = redis.ConnectionPool(host=self.host, port=self.port, password=self.pwd, max_connections=self.max_connections)
+        redis_config = RedisDB.get_redis_config()
+        redis_config.update(**kwarg)
+        redis_config["max_connections"] = kwarg.get("max_connections",1000)
+        POOL = redis.ConnectionPool(**redis_config)
         self.redis = redis.Redis(connection_pool=POOL)
         return self.redis.ping()
 
-    def add(self, item, **kwargs):
+    def add(self, data, **kwargs):
+        if not self.redis.ping():
+            self.connect()
         super().add()
-        item = pickle.dumps(item) # 序列化
+        if self.serialize=="pickle":
+            data = pickle.dumps(data)  # 序列化
+        elif self.serialize=="json":
+            data = json.dumps(data)
+        else:
+            data = str(data)
         table = kwargs.get("talbe", self.table)
-        self.nums += 1
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["add"])
-        func(table, item)
+        func(table, data)
 
 
     def get(self, **kwargs):
+        if not self.redis.ping():
+            self.connect()
         table = kwargs.get("talbe", self.table)
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["get"])
         res  = func(table) # 序列化
-        return pickle.loads(res)
+        if self.serialize=="pickle":
+            res = pickle.loads(res)  # 序列化
+        elif self.serialize=="json":
+            res = json.loads(res)
+        return res
 
     def empty(self, **kwargs):
         table = kwargs.get("talbe", self.table)

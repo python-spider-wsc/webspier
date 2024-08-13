@@ -14,8 +14,10 @@ class MyResponse(Response):
     @property
     def text(self): # 重写text，主要解决编码问题
         if self._cached_text is None:
-            self._cached_text = self.content.decode(self.apparent_encoding if self.apparent_encoding else "utf-8")
-
+            try:
+                self._cached_text = self.content.decode(self.apparent_encoding if self.apparent_encoding else "utf-8")
+            except:
+                self._cached_text = super().text
         return self._cached_text
     
     def save_as_file(self, filename):

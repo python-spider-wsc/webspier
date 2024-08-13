@@ -87,6 +87,9 @@ class DownloadParser(baseParser.BaseParser):
         except Exception as e:
             status = 0
             self.queue.error_nums += 1 # 回调解析失败，保存结果，不再重试
+            if repr(e) not in self.error_collections:
+                self.error_collections[repr(e)] = {"name":"解析结果", "nums":0}
+            self.error_collections[repr(e)]["nums"] += 1 
             if setting.SAVE_ERROR_RESPONSE and getattr(request, "save_error", True):
                 self.save_response_into_mongo(request, response, col="error")
             log.error("parse error:")
@@ -126,9 +129,13 @@ class DownloadParser(baseParser.BaseParser):
             check_reponse = getattr(request, "check_reponse", self.spider.check_reponse)
             if check_reponse is None:
                 return True
-            return check_reponse(request, response)
+            flag = check_reponse(request, response)
+            if not flag:
+                log.error("response error: %s", response.text)
+            return flag
         except Exception as e:
             log.error("check reponse error")
+            log.error("response error: %s", response.text)
             log.exception(e)
             if repr(e) not in self.error_collections:
                 self.error_collections[repr(e)] = {"name":"请求结果检查", "nums":0}

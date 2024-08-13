@@ -15,7 +15,7 @@ import datetime
 from webspider.config import settings
 from webspider.db.mysqlDB import BaseModel
 from webspider.utils import tools
-
+import traceback
 
 class BaseSpider():
     """爬虫的接口类"""
@@ -112,13 +112,16 @@ class BaseSpider():
             log.error(e)
             log.exception(e)
             text = "爬虫{}运行出错: {}".format(self.name, e)
-            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES)
+            text = f"""爬虫：<font color="comment">{self.name}</font>运行出错。\n
+            >环境: **{settings.ENVIRONMENT}**
+            >详情: `{traceback.format_exc()}`"""
+            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
             status = 2
         finally:
             self.record_after(status, errors)
 
     def all_thread_is_done(self):
-        for i in range(20): # 多检测几次，防止误杀
+        for i in range(40): # 多检测几次，防止误杀
             if self.response_queue.check_time<3 or self.database_queue.check_time<3:
                 return False
             if not (self.response_queue.empty() and self.database_queue.empty()):
@@ -128,7 +131,7 @@ class BaseSpider():
                 log.error("失败次数多于成功次数，已停止爬虫")
                 return True
             time.sleep(0.2)
-            log.info("第%s次队列已空", i)
+            log.debug("第%s次队列已空", i)
         return True
 
     def record_before(self):
@@ -142,17 +145,22 @@ class BaseSpider():
 
     def send_msg(self, cost_time, status, errors):
         errors = errors or {}
-        status = "成功" if status==1 else "失败"
         key = self.__dict__.get("wechat_key") or settings.WORKWECHATKEY
         if key:
-            text = "爬虫{}运行{}, 共耗时{}, 请求成功{}次,失败{}次,保存{}条数据".format(self.name, status, cost_time, self.response_queue.success_nums, self.response_queue.error_nums, self.database_queue.success_nums)
-            tools.work_wechat_send_msg(text, key)
+            text = f"""爬虫：<font color="warning">{self.name}</font>运行{"成功" if status==1 else "**失败**"}。\n
+            >环境: {settings.ENVIRONMENT}
+            >耗时: {cost_time}
+            >详情: 请求成功**{self.response_queue.success_nums}**次,失败**{self.response_queue.error_nums}**次,共保存**{self.database_queue.success_nums}**条数据"""
+            tools.work_wechat_send_msg(text, key, msg_type="markdown")
         text = []
         for key in errors:
             error = errors[key]
             text.append(f"{error['name']}发生错误:{key}， 共{error['nums']}次")
         if text:
-            tools.work_wechat_send_msg(f"本次{self.name}抓取错误:\n"+"\n".join(text), settings.WORKWECHATERRORKEY, settings.WORKWECHATPHONES)
+            text = f"""爬虫：<font color="comment">{self.name}</font>发生错误。\n
+            >环境: {settings.ENVIRONMENT}
+            >详情: \n{";".join(text)}"""
+            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
 
     def record_after(self, status=1, errors=None):
         """任务保存到mysql"""
@@ -164,7 +172,27 @@ class BaseSpider():
         self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now(),
                              request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
                              save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
+        self.verify_task()
         log.info("spider < %s > finish", self.name)
+
+    def verify_task(self):
+        """验证此次任务是否成功：通过请求量和保存数据量"""
+        sql = "SELECT AVG(success_nums) success_nums, AVG(save_nums) save_nums FROM `wsc_task` WHERE spider_id=%s and status=1 and create_time>%s"
+        date = self.start_time-datetime.timedelta(days=4)
+        res = self.task_mysql.mysql.fetchOne(sql, self.spider_id, date.date())
+        flag = 0
+        if res["success_nums"] and abs(self.response_queue.success_nums-res["success_nums"])/res["success_nums"]>0.25:
+            flag = 1
+            data = {"name":"请求数量", "nums":self.response_queue.success_nums, "last_nums":int(res["success_nums"])}
+        elif res["save_nums"] and abs(self.database_queue.success_nums-res["save_nums"])/res["save_nums"]>0.25:
+            flag = 2 
+            data = {"name":"保存数量", "nums":self.database_queue.success_nums, "last_nums":int(res["save_nums"])}
+        if flag:
+            text = f"""爬虫：<font color="comment">{self.name}</font>数据浮动超过25%。\n
+            >环境: {settings.ENVIRONMENT}
+            >异常指标: {data["name"]}
+            >详情: 近四天平均数量为{data["last_nums"]}，本次数量为{data["nums"]} """
+            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
     
     def test(self, *args, **kwargs):
         self.test_flag = True

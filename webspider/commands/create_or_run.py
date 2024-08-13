@@ -75,7 +75,7 @@ class Record():
     def save_record_into_mysql(self, name, path):
         if not settings.DATABASES: # 没有配置mysql信息
             raise Exception("没有配置mysql信息")
-        work_path = os.path.join(os.getenv("SettingPath"), "../..")
+        work_path = os.path.join(os.getenv("CrawlSetting"), "../..")
         path=os.path.relpath(os.path.abspath(path), work_path).replace("\\", "/")
         self.table_spider.save(name=name, path=path)
 
@@ -160,7 +160,7 @@ class Running(Record):
                 raise Exception("MYSQL中不存在该爬虫")
             path = res["path"]
             if not os.path.exists(path):
-                path=os.path.abspath(os.path.join(os.getenv("SettingPath"), "../..", path))
+                path=os.path.abspath(os.path.join(os.getenv("CrawlSetting"), "../..", path))
             bash = 'python3 '+path+" --id "+str(res["id"])
             if args.save_response: # 首先判断命令行参数
                 bash += " --save"

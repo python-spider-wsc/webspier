@@ -24,6 +24,7 @@ class BaseMQ():
         return time.time() - self.add_time
 
     def add(self):
+        self.nums += 1
         self.click_time()
 
     def get(self, **kwargs):

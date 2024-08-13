@@ -25,6 +25,9 @@ class ResponseRecordMongo():
         data["response"] = response.text if response else ""
         data["date"] = str(datetime.datetime.now())
         data["status_code"] = response.status_code if response else 0
+        for key in request.requests_kwargs:
+            if isinstance(request.requests_kwargs[key], datetime.date):
+                request.requests_kwargs[key] = str(request.requests_kwargs[key])
         data["request"] = request.requests_kwargs
         data["task_id"] = spider.task_id
         data["spider_id"] = spider.spider_id

@@ -17,7 +17,6 @@ class MemoryDB(BaseMQ):
         
     def add(self, item):
         super().add()
-        self.nums += 1
         self.queue.put(item)
 
     def get(self):

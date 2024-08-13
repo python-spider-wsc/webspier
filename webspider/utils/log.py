@@ -8,12 +8,31 @@
 
 import logging
 from logging.handlers import RotatingFileHandler
+from webspider.db.redisDB import RedisDB
 from concurrent_log_handler import ConcurrentRotatingFileHandler # 多进程加锁日志
 from webspider.config import settings
 from better_exceptions import format_exception
 import os, sys
 
-def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_count=None, encoding=None, is_mp=False):
+# 队列日志处理器
+
+class RedisLoggingHandler(logging.Handler):
+
+    def __init__(self, level = 0):
+        super().__init__(level)
+        self.queue = RedisDB("COMMON_LOGS", category="queue")
+
+    def emit(self, record):
+        """
+        重写logging.Handler的emit方法
+        :param record: 传入的日志信息
+        :return:
+        """
+        # 对日志信息进行格式化
+        value = self.format(record)
+        self.queue.add(value)
+
+def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_count=None, encoding=None, is_mp=False, collect=False):
     if name: # 如果有名字，表示存储到日志文件中
         path = path or settings.LOG_PATH
         max_bytes = max_bytes or settings.LOG_MAX_BYTES
@@ -36,6 +55,11 @@ def get_logger(name=None, path=None, log_level=None, max_bytes=None, backup_coun
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+        if collect: # 把所有日志搜集到同一个文件中 级别为info
+            redis_handler = RedisLoggingHandler()
+            logger.setLevel("INFO")
+            redis_handler.setFormatter(formatter)
+            logger.addHandler(redis_handler)
     else:
         logger = logging.getLogger("console")
         logger.setLevel(logging.DEBUG)
@@ -100,4 +124,3 @@ class Log:
         return self.__class__.log.critical
 
 log = Log()
-

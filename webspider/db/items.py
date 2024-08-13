@@ -31,11 +31,12 @@ class ItemsInterface():
 class Items(ItemsInterface):
 
     _model = None
+    _data_base=None
 
     @classmethod
     def model(cls):
         if cls._model is None:
-            cls._model = BaseModel(cls._table_name, unique_key=getattr(cls, "_unique_key", None))
+            cls._model = BaseModel(cls._table_name, unique_key=getattr(cls, "_unique_key", None), database=getattr(cls, "_data_base", None))
         return cls._model
 
     def save(self):

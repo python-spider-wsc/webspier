@@ -105,16 +105,19 @@ class BaseModel(MySQLWrapper):
     """简单的ORM框架类"""
     _lock_B = threading.Lock()
 
-    def __init__(self, table, unique_key=None, database="default"):
+    def __init__(self, table, unique_key=None, database=None):
+        database= database or "default"
         super(BaseModel, self).__init__(**settings.DATABASES[database])
         self.TABLENAME = table
         self.UNIQUE_KEY = unique_key or []
+        self.PRIMARY = "id"
         self.init_model()
         for key in self.UNIQUE_KEY:
             if key not in self.FIELD:
                 raise Exception("唯一索引不在表空间中")
         
-    def find(self, data, columns=["id"]):
+    def find(self, data, columns=None):
+        columns = columns or [self.PRIMARY]
         sql = "SELECT {columns} FROM `{table}` WHERE {where}".format(columns=','.join(["`"+key+"`"for key in columns]),table=self.TABLENAME, where=' AND '.join(["`"+key+"`=%s"for key in self.UNIQUE_KEY]))
         return self.fetchOne(sql, *[data[key] for key in self.UNIQUE_KEY])
 
@@ -124,8 +127,8 @@ class BaseModel(MySQLWrapper):
         if self.UNIQUE_KEY: # 唯一ID未指定，直接插入
             result = self.find(kwargs)
             if result: #有更新
-                self.update(result["id"], kwargs)
-                return result["id"]
+                self.update(result[self.PRIMARY], kwargs)
+                return result[self.PRIMARY]
         return self.insert(kwargs)
 
     def insert(self, data):
@@ -147,7 +150,7 @@ class BaseModel(MySQLWrapper):
                 keys.append("`"+key+"`=%s")
                 value.append(data[key])
         value.append(uid)
-        sql = "UPDATE `{table}` SET {field} WHERE `id`=%s".format(table=self.TABLENAME, field=','.join(keys))
+        sql = "UPDATE `{table}` SET {field} WHERE `{primary}`=%s".format(table=self.TABLENAME, field=','.join(keys), primary=self.PRIMARY)
         return self.execute(sql, value, category="list")
 
     def init_model(self):
@@ -155,3 +158,7 @@ class BaseModel(MySQLWrapper):
         result = self.fetchAll(select_sql)
         self.FIELD = tuple((item["Field"] for item in result))
         self.DEFAULT = tuple((item["Default"] for item in result))
+        for item in result: # 获取主键 暂不支持联合主键
+            if item["Key"] == "PRI":
+                self.PRIMARY = item["Field"]
+                break
