@@ -87,14 +87,16 @@ class Log:
         self.config = kw
         path = self.config.get("path", settings.LOG_PATH)
         file = self.config.get("name")
+        if not file:
+            file = os.path.basename(sys._getframe(1).f_code.co_filename)
+            file = os.path.splitext(file)[0]+".log"
+            self.config["name"] = file
         self.filename = os.path.join(path, file) if file else ""
     
     def __getattr__(self, name):
         # 调用log时再初始化，为了加载最新的setting
-        if name in ["set_log_filename", "filename", "config"]:
+        if name in ["set_log_config", "filename", "config"]:
             return self.__dict__.get(name)
-        if name == "filename":
-            return getattr(self, name)
         if self.__class__.log is None:
             self.__class__.log = get_logger(**self.__dict__.get("config", {}))
         return getattr(self.__class__.log, name)

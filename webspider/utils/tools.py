@@ -110,12 +110,11 @@ def parseInt(value, point=2):
     return value
 
 
-def work_wechat_send_msg(text, key, mobile_list=None, msg_type="text"):
+def work_wechat_send_msg(text, key, mobile_list=None, msg_type="text", spider=""):
     """企业微信群中的机器人
         key：机器人的token,
         mobile_list: 提醒人的手机号列表  
     """
-    mobile_list = mobile_list or []
     headers = {
         'Content-Type': 'application/json',
     }
@@ -125,11 +124,20 @@ def work_wechat_send_msg(text, key, mobile_list=None, msg_type="text"):
     data = {
         "msgtype": msg_type,
         msg_type: {
-            "mentioned_mobile_list":mobile_list,
             "content": text
         }
     }
     requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send', headers=headers, params=params, json=data)
+    if mobile_list: # markdown不支持@
+        data = {
+            "msgtype": "text",
+            "text": {
+                "content": f"任务--{spider}发生错误",
+                "mentioned_mobile_list":mobile_list
+            }
+        }
+        requests.post('https://qyapi.weixin.qq.com/cgi-bin/webhook/send', headers=headers, params=params, json=data)
+
 
 def get_task_code():
     return str(uuid.uuid1())

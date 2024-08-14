@@ -30,6 +30,7 @@ class BaseSpider():
         self.task_id = tools.get_task_code()
         self.start_time = datetime.datetime.now()
         self.test_flag = False
+        self.verify_flag = True # 验证结果的告警是否发送@
 
     def call_end(self):
         """抓取结束后的回调函数"""
@@ -83,7 +84,7 @@ class BaseSpider():
 
         # 当两个队列全部为空时，认为线程结束了
         while not self.all_thread_is_done():
-            time.sleep(3)
+            time.sleep(10)
         result = {}
         for thread in threads:
             for key in thread.error_collections:
@@ -130,7 +131,7 @@ class BaseSpider():
             if i%5==0 and self.response_queue.error_nums>self.response_queue.success_nums and self.response_queue.nums>100:
                 log.error("失败次数多于成功次数，已停止爬虫")
                 return True
-            time.sleep(0.2)
+            time.sleep(0.5)
             log.debug("第%s次队列已空", i)
         return True
 
@@ -160,7 +161,7 @@ class BaseSpider():
             text = f"""爬虫：<font color="comment">{self.name}</font>发生错误。\n
             >环境: {settings.ENVIRONMENT}
             >详情: \n{";".join(text)}"""
-            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
+            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown", spider=self.name)
 
     def record_after(self, status=1, errors=None):
         """任务保存到mysql"""
@@ -172,14 +173,16 @@ class BaseSpider():
         self.task_mysql.save(task_code=self.task_id, status=status, end_time=datetime.datetime.now(),
                              request_nums=self.response_queue.nums, success_nums=self.response_queue.success_nums, 
                              save_nums = self.database_queue.success_nums, save_error_nums = self.database_queue.error_nums)
-        self.verify_task()
+        if not errors: # 没有报错，验证请求的数量和保存的数据量
+            self.verify_task()
         log.info("spider < %s > finish", self.name)
 
     def verify_task(self):
         """验证此次任务是否成功：通过请求量和保存数据量"""
         sql = "SELECT AVG(success_nums) success_nums, AVG(save_nums) save_nums FROM `wsc_task` WHERE spider_id=%s and status=1 and create_time>%s"
         date = self.start_time-datetime.timedelta(days=4)
-        res = self.task_mysql.mysql.fetchOne(sql, self.spider_id, date.date())
+        res = self.task_mysql.fetchOne(sql, self.spider_id, date.date())
+        log.info("verify task:spider %s, date %s", self.spider_id, date.date())
         flag = 0
         if res["success_nums"] and abs(self.response_queue.success_nums-res["success_nums"])/res["success_nums"]>0.25:
             flag = 1
@@ -192,7 +195,10 @@ class BaseSpider():
             >环境: {settings.ENVIRONMENT}
             >异常指标: {data["name"]}
             >详情: 近四天平均数量为{data["last_nums"]}，本次数量为{data["nums"]} """
-            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
+            if self.verify_flag:
+                tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown", spider=self.name)
+            else:
+                tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
     
     def test(self, *args, **kwargs):
         self.test_flag = True
