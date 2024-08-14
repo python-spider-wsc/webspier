@@ -87,14 +87,14 @@ class BaseSpider():
             time.sleep(10)
         result = {}
         for thread in threads:
+            thread.stop()
+            thread.join()
             for key in thread.error_collections:
                 error = thread.error_collections[key]
                 if key not in result:
                     result[key] = error
                 else:
-                    result[key]["nums"] += error['nums']
-            thread.stop()
-            thread.join()
+                    result[key]["nums"] += error['nums'] 
         database_thread.stop()
         database_thread.join()
         return result
@@ -116,7 +116,7 @@ class BaseSpider():
             text = f"""爬虫：<font color="comment">{self.name}</font>运行出错。\n
             >环境: **{settings.ENVIRONMENT}**
             >详情: `{traceback.format_exc()}`"""
-            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
+            tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown", spider=self.name)
             status = 2
         finally:
             self.record_after(status, errors)
@@ -196,7 +196,7 @@ class BaseSpider():
             >异常指标: {data["name"]}
             >详情: 近四天平均数量为{data["last_nums"]}，本次数量为{data["nums"]} """
             if self.verify_flag:
-                tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown", spider=self.name)
+                tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown", spider=self.name+"数据量")
             else:
                 tools.work_wechat_send_msg(text, settings.WORKWECHATERRORKEY, mobile_list=settings.WORKWECHATPHONES, msg_type="markdown")
     

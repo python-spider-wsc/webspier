@@ -64,7 +64,7 @@ class RedisDB(BaseMQ):
             data = json.dumps(data)
         else:
             data = str(data)
-        table = kwargs.get("talbe", self.table)
+        table = kwargs.get("table", self.table)
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["add"])
         func(table, data)
 
@@ -72,17 +72,18 @@ class RedisDB(BaseMQ):
     def get(self, **kwargs):
         if not self.redis.ping():
             self.connect()
-        table = kwargs.get("talbe", self.table)
+        table = kwargs.get("table", self.table)
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["get"])
         res  = func(table) # 序列化
-        if self.serialize=="pickle":
-            res = pickle.loads(res)  # 序列化
-        elif self.serialize=="json":
-            res = json.loads(res)
+        if res:
+            if self.serialize=="pickle":
+                res = pickle.loads(res)  # 序列化
+            elif self.serialize=="json":
+                res = json.loads(res)
         return res
 
     def empty(self, **kwargs):
-        table = kwargs.get("talbe", self.table)
+        table = kwargs.get("table", self.table)
         func = getattr(self.redis, self.__class__.FUNC_MAP[self.category]["empty"])
         return func(table)==0
 
